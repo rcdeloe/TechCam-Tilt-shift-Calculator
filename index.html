@@ -148,7 +148,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Oct-30 v0.132</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Oct-30 v0.145</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -202,6 +202,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
    </div>
    <label class="fovrow" id="fov-row"><input type="checkbox" id="fov-only"> Show in focus only within field of view</label>
    <label class="fovrow" id="diff-row"><input type="checkbox" id="diff-on" checked> Show diffraction in addition to defocus blur</label>
+   <label class="fovrow" id="coarse-row"><input type="checkbox" id="coarse-on"> Use coarse movements</label>
    <div class="row" id="ground-row"><label for="n_ground">Ground surface</label><select id="n_ground" style="grid-column:1/3"><option value="0">Flat, level ground</option><option value="1">Uneven ground sloping down</option><option value="2">Uneven ground sloping up</option></select></div>
    <div class="row" id="curv-row"><label for="n_curv">Field curvature</label><select id="n_curv" style="grid-column:1/3"><option value="0">None</option><option value="1">Mild</option><option value="2">Strong</option></select></div>
    </details>
@@ -239,8 +240,8 @@ const DMODELS=[
  {id:'iq360',name:'Phase One IQ3 60 / IQ260 / IQ160',cls:5,pitch:6.0,est:'size',grp:'Medium format backs 53.4 \u00d7 40 mm'},
  {id:'oth5',name:'Other 53.4 \u00d7 40 mm',cls:5,pitch:null,grp:'Medium format backs 53.4 \u00d7 40 mm'}];
 // Estimated values (the yellow cells of the spreadsheets): where a result depends on one, a small tag is shown beside it.
-const EST_LENS={cambo_actar_35:['circ'],pen_a645_35:['circ'],pen_a645_75:['circ'],pen_a645_150:['circ'],pen_p67_55:['circ'],rod_hrdsw_138:['ext'],rod_amsd_120:['ext'],sch_ad_80m:['ext'],sch_ad_120m:['ext']}; // circ: image circle; ext: flange distance or extension used for the infinity check
-const EST_CAM={cambo_wide_ds:['ext'],arca_rm3di:['ext'],arca_m_two_mf:['ext'],alpa_12_plus:['ext'],alpa_12_stc:['ext'],alpa_12_swa:['ext'],cambo_actus_g:['ext'],cambo_actus_mv:['ext'],arca_universalis:['ext'],linhof_techno:['ext'],swebo_tcs20:['ext']}; // ext: the minimum or maximum extension
+const EST_LENS={cambo_actar_35:['circ'],pen_a645_35:['circ'],pen_penthax_35:['circ'],pen_a645_75:['circ'],pen_a645_150:['circ'],pen_p67_55:['circ'],rod_hrdsw_138:['ext'],rod_amsd_120:['ext'],sch_ad_80m:['ext'],sch_ad_120m:['ext']}; // circ: image circle; ext: flange distance or extension used for the infinity check
+const EST_CAM={cambo_actus_xl_db:['ext'],cambo_wide_ds:['ext'],arca_rm3di:['ext'],arca_m_two_mf:['ext'],alpa_12_plus:['ext'],alpa_12_stc:['ext'],alpa_12_swa:['ext'],cambo_actus_g:['ext'],cambo_actus_mv:['ext'],arca_universalis:['ext'],linhof_techno:['ext'],swebo_tcs20:['ext']}; // ext: the minimum or maximum extension
 const EST_TEXT={panel:'the tilt/swing lens panel (assumed to exist for this lens, with 5\u00b0 of tilt and swing and an estimated shortest focus)',tilt:'the tilt and swing limit (taken as 5\u00b0 from Alpa\'s adapter figures)',circ:'the lens image circle (so the shift limit is approximate)',ext:'the extension limits (so the closest focus distance, and whether infinity can be reached, are approximate)',move:'the movement limit set for this lens and camera combination',pitch:'the pixel pitch of this digital camera',size:'the sensor size (a little larger than the size class used, by about 0.5 mm)'};
 const dmodel=id=>DMODELS.find(m=>m.id===id)||null;
 const dmodelOther=cls=>DMODELS.find(m=>m.cls===cls&&m.pitch===null)||null;
@@ -342,7 +343,7 @@ function build(id,list){
   d.innerHTML=`<label for="n_${k}">${l}</label><input type="number" id="n_${k}" min="${mn}" max="${mx}" step="${st}" value="${val}"><input type="range" id="r_${k}" aria-label="${l}" min="${mn}" max="${mx}" step="${st}" value="${val}">`;
   box.appendChild(d);
   const n=d.querySelector('[type=number]'),r=d.querySelector('[type=range]');
-  const on=(src,other)=>()=>{const x=parseFloat(src.value);if(isNaN(x))return;other.value=x;const cf=imperial&&UN[k]?UN[k].f:1;const hi=k==='shift'?SHIFTHI:k==='tilt'?TILTHI:mx,lo=k==='shift'?-SHIFTLO:k==='tilt'?-TILTLO:mn;V[k]=Math.min(hi,Math.max(lo,x/cf));const clp=V[k]!==x;if(LENS&&(k==='shift'||k==='tilt')){const q=k==='tilt'?0.25:0.5;V[k]=Math.round(V[k]/q)*q;}if((k==='shift'||k==='tilt')&&(clp||src===r)){n.value=V[k];r.value=V[k];}draw();};
+  const on=(src,other)=>()=>{const x=parseFloat(src.value);if(isNaN(x))return;other.value=x;const cf=imperial&&UN[k]?UN[k].f:1;const hi=k==='shift'?SHIFTHI:k==='tilt'?TILTHI:mx,lo=k==='shift'?-SHIFTLO:k==='tilt'?-TILTLO:mn;V[k]=Math.min(hi,Math.max(lo,x/cf));const clp=V[k]!==x;if(CRS()&&(k==='shift'||k==='tilt')){const q=k==='tilt'?0.25:0.5;V[k]=Math.round(V[k]/q)*q;}if((k==='shift'||k==='tilt')&&(clp||src===r)){n.value=V[k];r.value=V[k];}draw();};
   n.addEventListener('input',on(n,r));r.addEventListener('input',on(r,n));
   if(k==='shift'||k==='tilt')n.addEventListener('change',()=>{n.value=V[k];r.value=V[k];}); // a typed value settles on the nearest allowed step
  });
@@ -365,8 +366,8 @@ build('main-controls',MAIN);build('adv-controls',EXTRA.concat(ADV));
  document.getElementById('or-port').addEventListener('click',()=>{if(!PORTRAIT){setOrient(true);draw();}});
 }
 {const box=document.getElementById('adv-controls'),row=id=>{const e=document.getElementById(id);return e&&(e.closest('.row')||e.parentElement);};
- // Additional controls, in this order: units, scene width/depth, field curvature, in-focus-only check, sensor format, circle of confusion
- [document.querySelector('.unitsw'),row('n_view'),document.getElementById('ground-row'),document.getElementById('curv-row'),document.getElementById('fov-row'),document.getElementById('diff-row'),row('n_sensor'),row('n_circ'),row('n_coc')].forEach(e=>{if(e)box.appendChild(e);});}
+ // Additional controls, in this order: units, scene width/depth, field curvature, in-focus-only check, diffraction check, coarse-movements check, sensor format, circle of confusion
+ [document.querySelector('.unitsw'),row('n_view'),document.getElementById('ground-row'),document.getElementById('curv-row'),document.getElementById('fov-row'),document.getElementById('diff-row'),document.getElementById('coarse-row'),row('n_sensor'),row('n_circ'),row('n_coc')].forEach(e=>{if(e)box.appendChild(e);});}
 // focus: slider position (0-100, log scale, 100 = infinity) <-> distance in metres along the lens axis
 const FAR=5000;
 const tickStep=(span,n)=>imperial?nice(span*FT/n)/FT:nice(span/n); // a round step in the current units, in metres
@@ -377,9 +378,10 @@ const pastInf=p=>Math.max(0,p-100)*0.001*V.fl; // mm short of the infinity posit
 let DMIN=0.3; // closest focus distance in metres: the near end of the focus slider. Tilt-shift lenses focus as close as about 0.25 m (17 mm) to 0.5 m (90 mm), so 0.3 m serves them all
 const pctToDist=p=>p>100?-V.fl/(p-100):p>=100?Infinity:DMIN*Math.pow(FAR/DMIN,p/100);
 const distToPct=u=>(!isFinite(u)||u>=FAR)?100:Math.min(100,Math.max(0,100*Math.log(Math.max(u,DMIN)/DMIN)/Math.log(FAR/DMIN)));
-const dsp=v=>LENS?(v<1?v.toFixed(2):v<10?v.toFixed(1):Math.round(v)):(v<10?v.toFixed(2):v<100?v.toFixed(1):Math.round(v)); // with a lens, distances are given to about two figures
+const dsp=v=>CRS()?(v<1?v.toFixed(2):v<10?v.toFixed(1):Math.round(v)):(v<10?v.toFixed(2):v<100?v.toFixed(1):Math.round(v)); // with a lens, distances are given to about two figures
 const fmtD=x=>{const v=dv(x);return dsp(v)+uL();};
-const snapTilt=t=>LENS?Math.round(t/0.25)*0.25:t,tiltTxt=t=>(+t).toFixed(2);
+let COARSEMOVES=false;const CRS=()=>COARSEMOVES&&!!LENS; // 'Use coarse movements': 0.25° tilt steps, 0.5 mm shift steps and rounded readouts, but only with a lens chosen
+const snapTilt=t=>CRS()?Math.round(t/0.25)*0.25:t,tiltTxt=t=>(+t).toFixed(2);
 function syncFocus(fromSlider){
  const u=pctToDist(V.focus);
  if(!fromSlider)document.getElementById('r_focus').value=V.focus;
@@ -545,6 +547,12 @@ async function takeScreenshot(fmt){
 document.getElementById('auto-btn').addEventListener('click',autoTiltFocus);
 document.getElementById('fov-only').addEventListener('change',e=>{fovOnly=e.target.checked;draw();});
 document.getElementById('diff-on').addEventListener('change',e=>{diffOn=e.target.checked;draw();});
+function applyCoarse(){ // re-apply the lens's step sizes after 'Use coarse movements' is switched
+ for(const i of['n_tilt','r_tilt']){const e=document.getElementById(i);if(e)e.step=CRS()?0.25:0.05;}
+ if(CRS()){setVal('tilt',snapTilt(+V.tilt));setVal('shift',Math.round(V.shift*2)/2);}
+ document.getElementById('lens-note').style.display=CRS()?'':'none';
+}
+document.getElementById('coarse-on').addEventListener('change',e=>{COARSEMOVES=e.target.checked;applyCoarse();draw();});
 document.getElementById('n_ground').addEventListener('change',e=>{setGround(+e.target.value);draw();});
 document.getElementById('n_curv').addEventListener('change',e=>{curvLvl=+e.target.value;curved=curvLvl>0;updateAuto();draw();});
 document.getElementById('hyper-btn').addEventListener('click',()=>{setFocusDist(hyperM());draw();});
@@ -554,17 +562,17 @@ const defVal=(k,imp)=>imp&&IMP_DEF[k]!==undefined?IMP_DEF[k]:DEF[k];
 const defFocusM=imp=>imp?IMP_FOCUS_M:DEFAULT_FOCUS_M;
 // ---- lens picker: a lens fixes the focal length, aperture range, closest focus, image circle, maximum tilt and maximum shift
 const TLENSES={ // Technical Camera mode lenses, loaded from technical-lenses.xlsx (Lenses and Lens x Camera sheets). mfr, fmt: the manufacturer and format (Digital, Analog or Custom) that group the Lens drop-down. cams: the technical cameras the lens fits (OK or Restricted on the sheet; Unknown and No are left out). The camera, not the lens, sets tilt, rise/fall and shift; shift and tilt of 50 mm and 20 deg here only apply before a camera is chosen. nos: for a lens that fits a technical camera with only some of its digital cameras, the sensor kinds (mirrorless, back1, back2) it does not fit, per camera id. panel: for a camera whose tilt and swing come from a special lens panel (the Cambo WRS-1600), the panel for this lens: its name, tilt and swing each way, and shortest focus distance dmin (m), per camera id. tiltb: built-in tilt/swing of the lens (not used yet)
- rod_hrds_23:{name:"Rodenstock HR Digaron-S 23mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:23,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:44.8},
- rod_hrds_28:{name:"Rodenstock HR Digaron-S 28mm f/4.5",mfr:"Rodenstock",fmt:"Digital",fl:28,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:53.1},
- rod_hrds_35:{name:"Rodenstock HR Digaron-S 35mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:35,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:53.5},
+ rod_hrds_23:{name:"Rodenstock HR Digaron-S 23mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:23,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:44.8,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
+ rod_hrds_28:{name:"Rodenstock HR Digaron-S 28mm f/4.5",mfr:"Rodenstock",fmt:"Digital",fl:28,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:53.1,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
+ rod_hrds_35:{name:"Rodenstock HR Digaron-S 35mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:35,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:53.5,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
  rod_hrds_60:{name:"Rodenstock HR Digaron-S 60mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:60,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:64.3},
  rod_hrds_100:{name:"Rodenstock HR Digaron-S 100mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:100,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:99.8},
- rod_hrds_180:{name:"Rodenstock HR Digaron-S 180mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:180,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:80,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],panel:{cambo_wrs1600:{id:"WTSA-180L",tilt:5,swing:5,dmin:1.7},cambo_wrs1200:{id:"WTSA-180L",tilt:5,swing:5,dmin:1.7}},ffd:177.4},
- rod_hrdw_32:{name:"Rodenstock HR Digaron-W 32mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:32,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},panel:{cambo_wrs1600:{id:"WTSA-832",tilt:5,swing:5,dmin:0.4},cambo_wrs1200:{id:"WTSA-832",tilt:5,swing:5,dmin:0.4}},ffd:69.2},
- rod_hrdw_40:{name:"Rodenstock HR Digaron-W 40mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:40,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},panel:{cambo_wrs1600:{id:"WTSA-840",tilt:5,swing:5,dmin:0.35},cambo_wrs1200:{id:"WTSA-840",tilt:5,swing:5,dmin:0.35}},ffd:69.5},
- rod_hrdw_50:{name:"Rodenstock HR Digaron-W 50mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:50,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{arca_universalis:["mirrorless"],arca_m_two_mf:["mirrorless"]},panel:{cambo_wrs1600:{id:"WTSA-850",tilt:5,swing:5,dmin:0.55},cambo_wrs1200:{id:"WTSA-850",tilt:5,swing:5,dmin:0.55}},ffd:76},
- rod_hrdw_70:{name:"Rodenstock HR Digaron-W 70mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:70,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:100,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],panel:{cambo_wrs1600:{id:"WTSA-870",tilt:5,swing:5,dmin:0.9},cambo_wrs1200:{id:"WTSA-870",tilt:5,swing:5,dmin:0.9}},ffd:72.7},
- rod_hrdsw_90:{name:"Rodenstock HR Digaron-SW 90mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:90,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],panel:{cambo_wrs1600:{id:"WTSA-890",tilt:5,swing:5,dmin:1.25},cambo_wrs1200:{id:"WTSA-890",tilt:5,swing:5,dmin:1.25}},ffd:109.4},
+ rod_hrds_180:{name:"Rodenstock HR Digaron-S 180mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:180,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:80,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs5000", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],panel:{cambo_wrs1600:{id:"WTSA-180L",tilt:5,swing:5,dmin:1.7},cambo_wrs1200:{id:"WTSA-180L",tilt:5,swing:5,dmin:1.7}},ffd:177.4},
+ rod_hrdw_32:{name:"Rodenstock HR Digaron-W 32mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:32,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs5000", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},panel:{cambo_wrs1600:{id:"WTSA-832",tilt:5,swing:5,dmin:0.4},cambo_wrs1200:{id:"WTSA-832",tilt:5,swing:5,dmin:0.4}},ffd:69.2},
+ rod_hrdw_40:{name:"Rodenstock HR Digaron-W 40mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:40,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs5000", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},panel:{cambo_wrs1600:{id:"WTSA-840",tilt:5,swing:5,dmin:0.35},cambo_wrs1200:{id:"WTSA-840",tilt:5,swing:5,dmin:0.35}},ffd:69.5},
+ rod_hrdw_50:{name:"Rodenstock HR Digaron-W 50mm f/4",mfr:"Rodenstock",fmt:"Digital",fl:50,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs5000", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],nos:{arca_universalis:["mirrorless"],arca_m_two_mf:["mirrorless"]},panel:{cambo_wrs1600:{id:"WTSA-850",tilt:5,swing:5,dmin:0.55},cambo_wrs1200:{id:"WTSA-850",tilt:5,swing:5,dmin:0.55}},ffd:76},
+ rod_hrdw_70:{name:"Rodenstock HR Digaron-W 70mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:70,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:100,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs5000", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],panel:{cambo_wrs1600:{id:"WTSA-870",tilt:5,swing:5,dmin:0.9},cambo_wrs1200:{id:"WTSA-870",tilt:5,swing:5,dmin:0.9}},ffd:72.7},
+ rod_hrdsw_90:{name:"Rodenstock HR Digaron-SW 90mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:90,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_wrs1600", "cambo_wrs5000", "cambo_wrs1200", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],panel:{cambo_wrs1600:{id:"WTSA-890",tilt:5,swing:5,dmin:1.25},cambo_wrs1200:{id:"WTSA-890",tilt:5,swing:5,dmin:1.25}},ffd:109.4},
  rod_hrdsw_138:{name:"Rodenstock HR Digaron-SW float 138mm f/6.5",mfr:"Rodenstock",fmt:"Digital",fl:138,ap:[6.5,22],dmin:0.3,shift:50,tilt:20,circ:110,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "alpa_12_plus", "alpa_12_stc", "alpa_12_swa", "arca_rm3di"],ffd:133},
  rod_apos_35:{name:"Rodenstock Apo-Sironar digital 35mm f/4.5",mfr:"Rodenstock",fmt:"Digital",fl:35,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:105,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:43.2},
  rod_apos_45:{name:"Rodenstock Apo-Sironar digital 45mm f/4.5",mfr:"Rodenstock",fmt:"Digital",fl:45,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:125,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:55.5},
@@ -574,22 +582,22 @@ const TLENSES={ // Technical Camera mode lenses, loaded from technical-lenses.xl
  rod_apos_150:{name:"Rodenstock Apo-Sironar digital 150mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:150,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:150,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:147},
  rod_apos_180:{name:"Rodenstock Apo-Sironar digital 180mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:180,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:150,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:177},
  rod_amsd_120:{name:"Rodenstock Apo-Macro-Sironar digital 120mm f/5.6",mfr:"Rodenstock",fmt:"Digital",fl:120,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:150,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:116},
- sch_ad_24xl:{name:"Schneider Apo-Digitar XL 24mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:24,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:60,cams:["arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_actus_mv", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:26.4},
- sch_d_28l:{name:"Schneider Digitar L 28mm f/2.8",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:28,ap:[2.8,22],dmin:0.3,shift:50,tilt:20,circ:60,cams:["arca_pico_digital_back", "cambo_actus_g", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "arca_rm3di"],nos:{arca_universalis:["mirrorless"],arca_m_two_mf:["mirrorless"]},ffd:69.9},
- sch_sd_28xl:{name:"Schneider Super-Digitar XL 28mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:28,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:35.2},
- sch_ad_35xl:{name:"Schneider Apo-Digitar XL 35mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:35,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"]},ffd:39.4},
+ sch_ad_24xl:{name:"Schneider Apo-Digitar XL 24mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:24,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:60,cams:["arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "cambo_actus_mv", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:26.4,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
+ sch_d_28l:{name:"Schneider Digitar L 28mm f/2.8",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:28,ap:[2.8,22],dmin:0.3,shift:50,tilt:20,circ:60,cams:["arca_pico_digital_back", "cambo_actus_g", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "arca_rm3di"],nos:{arca_universalis:["mirrorless"],arca_m_two_mf:["mirrorless"]},ffd:69.9,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
+ sch_sd_28xl:{name:"Schneider Super-Digitar XL 28mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:28,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "linhof_techno", "cambo_actus_mv", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:35.2,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
+ sch_ad_35xl:{name:"Schneider Apo-Digitar XL 35mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:35,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"]},ffd:39.4,nocams:["cambo_wrs1200","cambo_wrs1600", "cambo_wrs5000","cambo_wrs5000"]},
  sch_ad_43xl:{name:"Schneider Apo-Digitar XL 43mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:43,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:110,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"],arca_universalis:["mirrorless"]},ffd:48.9},
  sch_ad_47xl:{name:"Schneider Apo-Digitar XL 47mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:47,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:113,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "swebo_tcs20", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"]},ffd:52.3},
  sch_ad_60n:{name:"Schneider Apo-Digitar N 60mm f/4",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:60,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:60,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:55.1},
  sch_ad_60xl:{name:"Schneider Apo-Digitar XL 60mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:60,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:67.3},
- sch_ad_72l:{name:"Schneider Apo-Digitar L 72mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:72,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:68.4},
+ sch_ad_72l:{name:"Schneider Apo-Digitar L 72mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:72,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:68.4},
  sch_ad_80l:{name:"Schneider Apo-Digitar L 80mm f/4",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:80,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:78.8},
- sch_ad_90n:{name:"Schneider Apo-Digitar N 90mm f/4.5",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:90,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:86.8},
- sch_ad_100n:{name:"Schneider Apo-Digitar N 100mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:100,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:97},
- sch_ad_100a:{name:"Schneider Apo-Digitar asph. 100mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:95.4},
- sch_ad_120n:{name:"Schneider Apo-Digitar N 120mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:120,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:110,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:120.1},
- sch_ad_120a:{name:"Schneider Apo-Digitar asph. 120mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:120,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:150,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:119.7},
- sch_ad_150n:{name:"Schneider Apo-Digitar N 150mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:150,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:110,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:151.4},
+ sch_ad_90n:{name:"Schneider Apo-Digitar N 90mm f/4.5",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:90,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:86.8},
+ sch_ad_100n:{name:"Schneider Apo-Digitar N 100mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:100,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:97},
+ sch_ad_100a:{name:"Schneider Apo-Digitar asph. 100mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:95.4},
+ sch_ad_120n:{name:"Schneider Apo-Digitar N 120mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:120,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:110,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:120.1},
+ sch_ad_120a:{name:"Schneider Apo-Digitar asph. 120mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:120,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:150,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:119.7},
+ sch_ad_150n:{name:"Schneider Apo-Digitar N 150mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:150,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:110,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:151.4},
  sch_ad_180t:{name:"Schneider Apo-Digitar T 180mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:180,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:173.2},
  sch_ad_210t68:{name:"Schneider Apo-Digitar T 210mm f/6.8",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:210,ap:[6.8,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:202.6},
  sch_ad_210t56:{name:"Schneider Apo-Digitar T 210mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Digital",fl:210,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:120,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:202.6},
@@ -605,9 +613,9 @@ const TLENSES={ // Technical Camera mode lenses, loaded from technical-lenses.xl
  cambo_actar_90:{name:"Cambo Actar 90mm f/4",mfr:"Cambo",fmt:"Digital",fl:90,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["cambo_actus_g", "cambo_actus_mv"]},
  cambo_actar_105:{name:"Cambo Actar HR Macro 105mm f/5.6",mfr:"Cambo",fmt:"Digital",fl:105,ap:[5.6,16],dmin:0.3,shift:50,tilt:20,circ:82,cams:["cambo_actus_g", "cambo_actus_mv"]},
  cambo_actar_120:{name:"Cambo Actar 120mm f/5.6",mfr:"Cambo",fmt:"Digital",fl:120,ap:[5.6,32],dmin:0.3,shift:50,tilt:20,circ:100,cams:["cambo_actus_g", "cambo_actus_mv"]},
- arca_lens_24:{name:"Arca-Swiss Actar 24mm f/3.5",mfr:"Arca-Swiss",fmt:"Digital",fl:24,ap:[3.5,22],dmin:0.3,shift:50,tilt:20,circ:67,cams:["arca_pico_mirrorless", "arca_pico_digital_back"],tiltb:8.5},
- arca_lens_30:{name:"Arca-Swiss Actar 30mm f/5.6",mfr:"Arca-Swiss",fmt:"Digital",fl:30,ap:[5.6,32],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back"]},
- arca_lens_50:{name:"Arca-Swiss Actar 50mm f/2.8",mfr:"Arca-Swiss",fmt:"Digital",fl:50,ap:[2.8,32],dmin:0.3,shift:50,tilt:20,circ:67,cams:["arca_pico_mirrorless", "arca_pico_digital_back"],tiltb:8.5},
+ arca_lens_24:{name:"Arca-Swiss Arca 24mm f/3.5",mfr:"Arca-Swiss",fmt:"Digital",fl:24,ap:[3.5,22],dmin:0.3,shift:50,tilt:20,circ:67,cams:["arca_pico_mirrorless", "arca_pico_digital_back"],tiltb:8.5},
+ arca_lens_30:{name:"Arca-Swiss Arca 30mm f/5.6",mfr:"Arca-Swiss",fmt:"Digital",fl:30,ap:[5.6,32],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back"]},
+ arca_lens_50:{name:"Arca-Swiss Arca 50mm f/2.8",mfr:"Arca-Swiss",fmt:"Digital",fl:50,ap:[2.8,32],dmin:0.3,shift:50,tilt:20,circ:67,cams:["arca_pico_mirrorless", "arca_pico_digital_back"],tiltb:8.5},
  rod_apossa_100:{name:"Rodenstock Apo-Sironar-S 100mm f/5.6",mfr:"Rodenstock",fmt:"Analog",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:155,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:99},
  rod_apossa_135:{name:"Rodenstock Apo-Sironar-S 135mm f/5.6",mfr:"Rodenstock",fmt:"Analog",fl:135,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:208,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:132},
  rod_apossa_150:{name:"Rodenstock Apo-Sironar-S 150mm f/5.6",mfr:"Rodenstock",fmt:"Analog",fl:150,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:231,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:147},
@@ -616,10 +624,11 @@ const TLENSES={ // Technical Camera mode lenses, loaded from technical-lenses.xl
  rod_grn_75:{name:"Rodenstock Grandagon-N 75mm f/4.5",mfr:"Rodenstock",fmt:"Analog",fl:75,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:195,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:82},
  rod_grn_90:{name:"Rodenstock Grandagon-N 90mm f/4.5",mfr:"Rodenstock",fmt:"Analog",fl:90,ap:[4.5,22],dmin:0.3,shift:50,tilt:20,circ:236,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:98},
  sch_sa_47:{name:"Schneider Super-Angulon XL 47mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Analog",fl:47,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:166,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "arca_universalis", "arca_m_two_mf", "cambo_actus_mv", "linhof_techno", "arca_rm3di"],nos:{cambo_actus_mv:["mirrorless"]},ffd:59.1},
- sch_as_100:{name:"Schneider Apo-Symmar 100mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Analog",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:145,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:95.5},
+ sch_as_100:{name:"Schneider Apo-Symmar 100mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Analog",fl:100,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:145,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di", "mab_ii"],ffd:95.5},
  sch_as_120:{name:"Schneider Apo-Symmar L 120mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Analog",fl:120,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:189,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:116.3},
  sch_as_150:{name:"Schneider Apo-Symmar L 150mm f/5.6",mfr:"Schneider-Kreuznach",fmt:"Analog",fl:150,ap:[5.6,22],dmin:0.3,shift:50,tilt:20,circ:233,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "arca_rm3di"],ffd:142.2},
  pen_a645_35:{name:"Pentax-A 645 35mm f/3.5",mfr:"Pentax",fmt:"Medium Format",fl:35,ap:[3.5,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_rm3di", "arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20"],ffd:70.87,note:"Lens is focused by helicoid.",dminFix:0.3},
+ pen_penthax_35:{name:"PentHax-A 35mm f/3.5",mfr:"Pentax",fmt:"Medium Format",fl:35,ap:[3.5,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["mab_ii"],ffd:70.87,note:"Manual close focus adjustment required."},
  pen_a645_75:{name:"Pentax-A 645 75mm f/2.8",mfr:"Pentax",fmt:"Medium Format",fl:75,ap:[2.8,22],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_rm3di", "arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20"],ffd:70.87},
  pen_a645_150:{name:"Pentax-A 645 150mm f/3.5",mfr:"Pentax",fmt:"Medium Format",fl:150,ap:[3.5,32],dmin:0.3,shift:50,tilt:20,circ:70,cams:["arca_rm3di", "arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20"],ffd:70.87},
  pen_p67_55:{name:"Pentax 67 55mm f/4",mfr:"Pentax",fmt:"Medium Format",fl:55,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:90,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20"],ffd:84.95},
@@ -628,7 +637,7 @@ const TLENSES={ // Technical Camera mode lenses, loaded from technical-lenses.xl
  canon_ts_50:{name:"Canon TS-E 50mm f/2.8L Macro",mfr:"Canon",fmt:"Digital",fl:50,ap:[2.8,32],dmin:0.27,shift:50,tilt:20,circ:67,cams:["arca_rm3di","arca_universalis", "arca_m_two_mf"],dminFix:0.27,note:"Canon aperture control board required. The lens is focused by its own focus ring. Only the camera\u2019s movements are modelled, not the lens\u2019s built-in tilt and shift."},
  canon_ts_90:{name:"Canon TS-E 90mm f/2.8L Macro",mfr:"Canon",fmt:"Digital",fl:90,ap:[2.8,45],dmin:0.39,shift:50,tilt:20,circ:67,cams:["arca_rm3di","arca_universalis", "arca_m_two_mf"],dminFix:0.39,note:"Canon aperture control board required. The lens is focused by its own focus ring. Only the camera\u2019s movements are modelled, not the lens\u2019s built-in tilt and shift."},
  canon_ts_135:{name:"Canon TS-E 135mm f/4L Macro",mfr:"Canon",fmt:"Digital",fl:135,ap:[4,45],dmin:0.49,shift:50,tilt:20,circ:67,cams:["arca_rm3di","arca_universalis", "arca_m_two_mf"],dminFix:0.49,note:"Canon aperture control board required. The lens is focused by its own focus ring. Only the camera\u2019s movements are modelled, not the lens\u2019s built-in tilt and shift."},
- mam_g50_l:{name:"Mamiya G 50mm f/4 L (Modified)",mfr:"Mamiya",fmt:"Medium Format",fl:50,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:79,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20"],ffd:57.27},
+ mam_g50_l:{name:"Mamiya G 50mm f/4 L (Modified)",mfr:"Mamiya",fmt:"Medium Format",fl:50,ap:[4,22],dmin:0.3,shift:50,tilt:20,circ:79,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20", "mab_ii"],ffd:57.27},
  mam_rz_50:{name:"Mamiya RZ 50mm f/4.5 ULD L",mfr:"Mamiya",fmt:"Medium Format",fl:50,ap:[4.5,32],dmin:0.3,shift:50,tilt:20,circ:89.6,cams:["arca_pico_mirrorless", "arca_pico_digital_back", "cambo_actus_g", "cambo_actus_mv", "arca_universalis", "arca_m_two_mf", "linhof_techno", "swebo_tcs20"],ffd:105,note:"Close focus design."}
 };
 const LSRC=()=>TECH?TLENSES:LENSES; // the lens list of the current mode (TECH is declared later; it is only read when called)
@@ -638,11 +647,14 @@ const LENSES={}; // (the Advanced Tilt-Shift example lenses are not part of this
 // ext: lens-to-sensor distance range (mm) with the standard bellows and rail; tilt: positive/negative (deg); swing: each side (deg);
 // up/dn: how far the lens can rise / fall relative to the sensor (mm); shift: each side (mm). Estimated values are marked in the spreadsheet.
 // A technical camera that comes in a mirrorless and a digital back version is one entry in the menu: its variants share a group and a gname, and the choice of Digital camera decides which variant (with its own extension range and lens list) is used.
+// comb: true if the camera can combine tilt and swing, false if only one at a time, left out if unknown (not used yet; for a future combined tilt-and-swing view)
 const CAMERAS=[
- {id:'cambo_actus_g',sensors:['mirrorless'],name:'Cambo Actus G',extMin:15,extMax:134,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
+ {id:'cambo_actus_g',comb:true,sensors:['mirrorless'],name:'Cambo Actus G',extMin:15,extMax:134,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
+ {id:'cambo_actus_xl_db',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock','Cambo'],name:'Cambo Actus XL-DB',extMin:25,extMax:420,tiltPos:20,tiltNeg:20,swing:20,up:20,dn:20,shift:25}, // digital backs only; the Cambo page gives front and rear movements together (tilt and swing 20, rise/fall 20 each way, shift 25 each side), taken as the totals; extension: rails from 17 to 42 cm come with it and extension rails exist, so every lens is assumed to fit with the right rail and bellows (420 mm is the longest default rail); the minimum extension is an estimate
  {id:'cambo_actus_mv',sensors:['mirrorless','back1','back2'],name:'Cambo Actus MV',extMin:25,extMax:298,tiltPos:30,tiltNeg:30,swing:30,up:30,dn:30,shift:40},
  {id:'cambo_wide_ds',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo Wide DS',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:34,dn:26,shift:20}, // no tilt or swing of its own (the Cambo sheet lists none): they come from a lens tilt/swing panel, assumed for every Schneider-Kreuznach and Rodenstock lens; rise 34 mm and fall 26 mm for digital backs; helical focusing on the lens plate, closest focus estimated
  {id:'cambo_wrs1200',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo WRS-1200',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:25,dn:15,shift:20}, // like the WRS-1600 but the rear standard falls 25 mm (lens up 25) or rises 15 mm (lens down 15)
+ {id:'cambo_wrs5000',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo WRS-5000',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:25,dn:15,shift:22.5}, // like the WRS-1200: vertical shift 40 mm in all, 25 and 15 mm (direction assumed as on the WRS-1200); shift 45 mm in all; no tilt or swing of its own (they come from the lens panel, and the WRS-1600 panel data is used)
  {id:'cambo_wrs1600',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo WRS-1600',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:20,dn:20,shift:20}, // no bellows (fixedExt: focus is by the lens panel's helical mount, so the panel's shortest focus distance is used) and no tilt or swing of its own (panelTilt: they come from the lens's tilt/swing panel)
  // Alpa 12 bodies: no bellows or rail (fixedExt, helical: focus is by the lens's helical mount; dmin is an estimate); tilt and swing come from Alpa adapters (5 deg). Digital backs only, and the back can be rotated, so Landscape and Portrait do not depend on the body.
  // oneAxis: the body shifts along one axis only (amt mm each side). The camera is assumed to be set up for rise/fall in the Tilt and Rise/Fall view and for shift in the Swing and Shift view, so the other movement is greyed out.
@@ -650,16 +662,19 @@ const CAMERAS=[
  {id:'alpa_12_stc',sensors:['back1','back2'],name:'Alpa 12 STC',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,oneAxis:true,amt:18,tiltPos:5,tiltNeg:5,swing:5,up:0,dn:0,shift:18},
  {id:'alpa_12_swa',sensors:['back1','back2'],name:'Alpa 12 SWA',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,oneAxis:true,amt:25,tiltPos:5,tiltNeg:5,swing:5,up:25,dn:25,shift:0}, // the built-in shift is up; the camera is turned over for down, so 25 mm up and down
  // Arca-Swiss RM3Di (arca-swiss-usa.com): tilt or swing +/-5 deg (the tilt unit is turned 90 deg for swing), rise 30 / fall 20 mm, lateral shift +/-15 mm, all in plane. No bellows: R lenses focus by a helical, so closest focus is taken as 0.3 m (estimate). Takes digital backs through adapter plates and a Fuji GFX 50R on 6x9 adapter plates.
- {id:'arca_rm3di',sensors:['mirrorless','back1','back2'],name:'Arca-Swiss RM3Di',fitMfr:['Hasselblad'],onlyModels:['gfx50'],modelNote:'Only the GFX 50R body is compatible',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:5,tiltNeg:5,swing:5,up:30,dn:20,shift:15},
- {id:'arca_universalis',sensors:['mirrorless','back1','back2'],name:'Arca-Swiss F-Universalis',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:360,up:40,dn:60,shift:25},
- {id:'arca_m_two_mf',sensors:['mirrorless','back1','back2'],name:'Arca-Swiss M-Two MF',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:45,up:35,dn:35,shift:35},
- {id:'arca_pico_digital_back',sensors:['back1','back2'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico digital back',extMin:35.5,extMax:147.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
- {id:'arca_pico_mirrorless',sensors:['mirrorless'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico mirrorless',extMin:46.5,extMax:158.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
+ {id:'arca_rm3di',comb:false,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss RM3Di',fitMfr:['Hasselblad'],onlyModels:['gfx50'],modelNote:'Only the GFX 50R body is compatible',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:5,tiltNeg:5,swing:5,up:30,dn:20,shift:15},
+ {id:'arca_universalis',comb:true,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss F-Universalis',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:360,up:30,dn:70,shift:25},
+ {id:'arca_m_two_mf',comb:true,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss M-Two MF',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:45,up:35,dn:35,shift:35},
+ {id:'arca_pico_digital_back',comb:true,sensors:['back1','back2'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico digital back',extMin:35.5,extMax:147.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
+ {id:'arca_pico_mirrorless',comb:true,sensors:['mirrorless'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico mirrorless',extMin:46.5,extMax:158.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
  // Linhof Techno: manufacturer figures (ext 20 to 250 mm, tilt/swing +/-10, rise 20 / fall 20, shift 10 each side). Which lenses fit is set in the Lens x Camera sheet of technical-lenses.xlsx.
  {id:'linhof_techno',sensors:['back1','back2'],name:'Linhof Techno',extMin:20,extMax:250,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:10},
  // Swebo TCS20: tilt +/-15, swing +/-20, rear rise/fall +/-30, rear shift +/-30 (manufacturer). Extension range is NOT published: 20 to 200 mm is an estimate (250 mm rail, four-fold bellows).
- {id:'swebo_tcs20',sensors:['mirrorless','back1','back2'],name:'Swebo TCS20',extMin:20,extMax:200,tiltPos:15,tiltNeg:15,swing:20,up:30,dn:30,shift:30}];
+ {id:'swebo_tcs20',comb:true,sensors:['mirrorless','back1','back2'],name:'Swebo TCS20',extMin:20,extMax:200,tiltPos:15,tiltNeg:15,swing:20,up:30,dn:30,shift:30},
+ // MAB II (Custom): all movements on the front standard. Extension 22 to 80 mm, rise 12.5 / fall 12.5, shift 15 each side, tilt and swing +/-15 (author). Lenses: only the ten listed in the Lens x Camera sheet. Mirrorless: Fujifilm GFX only (both GFX series); no digital backs (author). Tilt+swing and shift+rise/fall can be combined (author).
+ {id:'mab_ii',mfr:'Custom',comb:true,combShift:true,sensors:['mirrorless'],onlyModels:['gfx100','gfx50'],modelNote:'Only Fujifilm GFX cameras are compatible',name:'MAB II',accText:'Extension mount tube required.',extMin:22,extMax:80,tiltPos:15,tiltNeg:15,swing:15,up:12.5,dn:12.5,shift:15}];
 const cmv=c=>c.oneAxis?(topView?{up:0,dn:0,shift:c.amt}:{up:c.amt,dn:c.amt,shift:0}):{up:c.up,dn:c.dn,shift:c.shift}; // a body that shifts along one axis only (oneAxis): the camera is taken to be set up for rise/fall in the Tilt and Rise/Fall view and for shift in the Swing and Shift view, so the other movement is not available
+const OPEN_TILT=25,OPEN_SHIFT=25; // with no technical camera, digital camera or lens chosen, tilt and swing reach 25° and rise/fall and shift 25 mm
 const ANGLE_CAP=45; // the tilt and swing sliders never go beyond this, whatever the camera allows (Settings sheet of the spreadsheet)
 // Exceptions (option A): extra limits for one lens on one technical camera (and, if digital is not null, one digital camera: an index into SENSORS), for mechanical reasons
 // that neither the camera nor the image circle explains, for example the rear of a lens meeting the camera body. up/dn: how far the lens may rise / fall relative to the sensor (mm);
@@ -692,7 +707,7 @@ const groupSens=c=>[...new Set(variantsOf(c).filter(v=>lensAllows(LENS,v)).flatM
 const pickVariant=c=>{const vs=variantsOf(c),fit=v=>lensAllows(LENS,v)&&(DIG===null||camAllows(v,DIG));return vs.find(v=>v===c&&fit(v))||vs.find(fit)||vs.find(v=>lensAllows(LENS,v))||c;};
 const sensKeys=(c,L=LENS)=>c.sensors.filter(k=>!(L&&L.nos&&L.nos[c.id]&&L.nos[c.id].includes(k))); // the digital cameras of that technical camera that the lens fits (a few lenses fit only the mirrorless or only the digital backs)
 const camAllows=(c,i,L=LENS)=>sensKeys(c,L).some(k=>SENS_TECH[k]===i);
-const lensAllows=(L,c)=>!L||!L.cams||L.cams.includes(c.id)||!!(c.fitMfr&&c.fitMfr.includes(L.mfr)); // a camera may also take every lens of the manufacturers in its fitMfr list, so lenses added later (Hasselblad V, say) fit without editing their camera lists
+const lensAllows=(L,c)=>!L||!(L.nocams&&L.nocams.includes(c.id))&&(!L.cams||L.cams.includes(c.id)||!!(c.fitMfr&&c.fitMfr.includes(L.mfr))); // nocams: cameras the author has marked as not taking this lens, which override everything else // a camera may also take every lens of the manufacturers in its fitMfr list, so lenses added later (Hasselblad V, say) fit without editing their camera lists
 const modelAllows=(c,m)=>!c||!c.onlyModels||!m||m.cls!==SENS_TECH.mirrorless||c.onlyModels.includes(m.id); // some cameras take only certain mirrorless bodies (onlyModels: model ids)
 const lensOK=L=>{ // can this lens still be chosen, given the technical camera and digital camera chosen so far?
  if(!TECH)return true;if(TCAM&&!CAMAUTO)return variantsOf(TCAM).some(v=>lensAllows(L,v)&&(DIG===null||DIGAUTO||camAllows(v,DIG,L)));if(!L.cams)return true;
@@ -715,7 +730,7 @@ function buildCamMenu(opts){ // a cascading menu: manufacturer, then camera; Cus
 function camLimits(){ // the camera sets the range of tilt (swing in the top view), rise/fall (shift in the top view)
  if(!TECH)return;
  if(!TCAM){ // no technical camera chosen yet: the lens (or generous limits for Custom) sets the movements, as before a camera was chosen
-  TILTMAX=LENS?LENS.tilt:20;LENSSHIFT=LENS?LENS.shift:50;TILTHI=TILTLO=TILTMAX;SHUP=SHDN=LENSSHIFT;DMAX=Infinity;
+  TILTMAX=LENS?LENS.tilt:DIG===null?OPEN_TILT:20;LENSSHIFT=LENS?LENS.shift:DIG===null?OPEN_SHIFT:50;TILTHI=TILTLO=TILTMAX;SHUP=SHDN=LENSSHIFT;DMAX=Infinity;
   const dm=LENS?LENS.dmin:0.3;if(Math.abs(dm-DMIN)>1e-9){const u=V.focus>100?Infinity:pctToDist(V.focus);DMIN=dm;if(isFinite(u))setFocusDist(Math.max(u,DMIN));}
  }else{
   const pn=TCAM.panelTilt?(panelOf()||{tilt:0,swing:0}):null;
@@ -799,7 +814,7 @@ function minFocusNote(){ // the minimum focus distance rests on an accessory whe
  const e=document.getElementById('lens-acc2');if(!e)return;const on=TECH&&TCAM&&(CAPPED||needsAcc());
  e.textContent=on?'Minimum focus distance in this tool assumes an extension tube or longer rail & bellows is being used.':'';e.style.display=on?'':'none';
 }
-function designNote(){estRefresh();const e=document.getElementById('lens-design');if(!e)return;const t=(TECH&&LENS&&LENS.note)||'';e.textContent=t;e.style.display=t?'':'none';} // a short note from the lenses spreadsheet (for example “Close focus design.”)
+function designNote(){estRefresh();const e=document.getElementById('lens-design');if(!e)return;const t=TECH&&LENS?[LENS.note,TCAM&&LENS.camNotes&&LENS.camNotes[TCAM.id]].filter(Boolean).join(' '):'';e.textContent=t;e.style.display=t?'':'none';} // a short note from the lenses spreadsheet (for example “Close focus design.”)
 function restrNote(){designNote(); // a lens whose movement is limited on this camera and digital camera (a row on the Exceptions sheet with a total-movement value)
  const e=document.getElementById('lens-restr');if(!e)return;const r=(TECH&&TCAM&&LENS)?excCaps().rad:Infinity,on=isFinite(r);
  e.textContent=on?'Movement with this lens is restricted to '+(+r.toFixed(1))+' mm.':'';e.style.display=on?'':'none';
@@ -807,7 +822,7 @@ function restrNote(){designNote(); // a lens whose movement is limited on this c
 function updateCamNote(){ // Technical Camera mode: a lens whose flange focal distance is longer than the camera's rail and bellows reach gets a note that stays until the lens (or camera) changes
  const nt=document.getElementById('lens-acc');if(!nt)return;
  const need=needsAcc();
- nt.textContent=need?'Requires longer rail & bellows, or an extension tube.':'';nt.style.display=need?'':'none';
+ nt.textContent=need?(TCAM.accText||'Requires longer rail & bellows, or an extension tube.'):'';nt.style.display=need?'':'none';
  minFocusNote();restrNote();notesRefresh();
 }
 let LENS=null,LEARN=false,TECH=true; // TECH: Technical Camera mode (the Advanced tool with view-camera vocabulary, sensors and lenses)
@@ -904,13 +919,13 @@ function setLens(id){
  const L=LSRC()[id]||null;const LS=L?(LEARN&&(id==='c24'||id==='c50')?1:L.sensor):undefined; // in Learner mode the Canon 24mm and 50mm are paired with a full frame sensor
 LENS=L;document.getElementById('n_lens').value=L?id:'custom';
  const u=V.focus<=100?pctToDist(V.focus):null; // keep the focus distance unless the new closest focus rules it out
- DMIN=L?L.dmin:0.3;TILTMAX=L?L.tilt:(TECH?20:15);LENSSHIFT=L?L.shift:(TECH?50:15);TILTHI=TILTLO=TILTMAX;SHUP=SHDN=LENSSHIFT;if(TECH&&TCAM)camLimits(); // in Technical Camera mode the camera, not the lens, sets the movements
+ DMIN=L?L.dmin:0.3;TILTMAX=L?L.tilt:(TECH?(DIG===null?OPEN_TILT:20):15);LENSSHIFT=L?L.shift:(TECH?(DIG===null?OPEN_SHIFT:50):15);TILTHI=TILTLO=TILTMAX;SHUP=SHDN=LENSSHIFT;if(TECH&&TCAM)camLimits(); // in Technical Camera mode the camera, not the lens, sets the movements
  setApList(L?[L.ap[0]].concat(APS_THIRD.filter(a=>a>L.ap[0]+1e-9&&a<=L.ap[1]+1e-9)):APS_HALF); // the lens's own widest aperture is always on the list
  if(L)setVal('ap',L.ap[0]); // a newly chosen lens starts wide open
- for(const i of['n_tilt','r_tilt']){const e=document.getElementById(i);e.min=-TILTLO;e.max=TILTHI;e.step=L?0.25:0.05;}
+ for(const i of['n_tilt','r_tilt']){const e=document.getElementById(i);e.min=-TILTLO;e.max=TILTHI;e.step=(COARSEMOVES&&L)?0.25:0.05;}
  if(V.tilt>TILTHI)setVal('tilt',TILTHI);else if(V.tilt<-TILTLO)setVal('tilt',-TILTLO);
- if(L){setVal('tilt',snapTilt(+V.tilt));setVal('shift',Math.round(V.shift*2)/2);}
- document.getElementById('lens-note').style.display=L?'':'none';
+ if(COARSEMOVES&&L){setVal('tilt',snapTilt(+V.tilt));setVal('shift',Math.round(V.shift*2)/2);}
+ document.getElementById('lens-note').style.display=(COARSEMOVES&&L)?'':'none';
  if(L){setVal('fl',L.fl);setVal('circ',L.circ);if(LS!==undefined)applySensor(LS);}
  lockRow('n_fl',!!L);lockRow('n_circ',!!L);lockRow('n_sensor',!!(L&&LS!==undefined));
  if(u!==null)setFocusDist(Math.max(u,DMIN));else syncFocus();
@@ -927,7 +942,7 @@ function resetAll(keepEquip){ // everything back to its default (using the defau
  if(keep&&keep.cm==='custom'){document.getElementById('n_coc').value=keep.cv;setCocMode('custom');}else setCocMode(keep?keep.cm:'sharp');
  if(LEARN)setLens('c50'); // the defaults above would undo the lens's own sensor and focal length
  curvLvl=0;curved=false;document.getElementById('n_curv').value='0';updateAuto();
- fovOnly=false;document.getElementById('fov-only').checked=false;diffOn=true;document.getElementById('diff-on').checked=true; // both modes: the shading is not limited to the field of view, and includes diffraction
+ COARSEMOVES=false;document.getElementById('coarse-on').checked=false;fovOnly=false;document.getElementById('fov-only').checked=false;diffOn=true;document.getElementById('diff-on').checked=true; // both modes: the shading is not limited to the field of view, and includes diffraction
  TOP=[];SIDE=learnObjs();syncObjs();
  setFocusDist(defFocusM(imperial));
 }
@@ -1073,7 +1088,8 @@ function excCaps(){ // the smallest extra limit (an exception) that applies to t
 }
 function updateShiftLimit(){ // the sensor must stay inside the image circle: its far corner is at (half the width across + the other shift, half the height + shift along) the shift direction
  const R=V.circ/2,S=topView?V.sensW:V.sens,P=topView?V.sens:V.sensW;if(!(R>0&&S>0&&P>0))return;
- const lim=(s,p,o)=>{const x=(Math.sqrt(Math.max(0,R*R-(o+p/2)*(o+p/2)))-s/2)*2;return Math.max(0,(TECH?Math.ceil(x-1e-9):Math.floor(x+1e-9))/2);}; // largest movement along a side of length s, with another movement o across it, in 0.5 mm steps. Technical Camera mode rounds up (users of these lenses know there is a little more room than the maker states); the other modes round down
+ const open=TECH&&!TCAM&&!LENS&&DIG===null; // nothing chosen yet: the image circle does not narrow the movements, so they reach the open limits
+ const lim=(s,p,o)=>{if(open)return Infinity;const x=(Math.sqrt(Math.max(0,R*R-(o+p/2)*(o+p/2)))-s/2)*2;return Math.max(0,(TECH?Math.ceil(x-1e-9):Math.floor(x+1e-9))/2);}; // largest movement along a side of length s, with another movement o across it, in 0.5 mm steps. Technical Camera mode rounds up (users of these lenses know there is a little more room than the maker states); the other modes round down
  let aUp=SHUP,aDn=SHDN,x={rad:Infinity};
  if(TECH){ // the movement the view does not show (b) has its own range: the camera's, the exceptions' and the image circle's; it in turn limits the movement the view shows (a)
   let bUp=LENSSHIFT,bDn=LENSSHIFT;x=excCaps();
@@ -1185,7 +1201,7 @@ function groundHit(){
  if(Math.abs(dy)<1e-9*Math.abs(dx)+1e-12)return null;
  return A[0]+(-A[1]/dy)*dx;
 }
-const fmt=(x,d=2)=>x>=999?'∞':LENS?fmtD(x):Lm(x,d);
+const fmt=(x,d=2)=>x>=999?'∞':CRS()?fmtD(x):Lm(x,d);
 function nice(r){const p=Math.pow(10,Math.floor(Math.log10(r)));for(const m of[1,2,5,10])if(p*m>=r)return p*m;return p*10;}
 
 let forceDpr=0; // set while drawing the screenshot, so that it comes out at print resolution
@@ -1658,7 +1674,7 @@ function draw(){
  // results
  const rows={}; // every figure is computed, but the Details pane shows only the three below
  const row=(a,b)=>{rows[a]=b;};
- row(topView?'Horizontal field of view':'Vertical field of view',((Math.atan((M.S/2+M.shift)/M.j)+Math.atan((M.S/2-M.shift)/M.j))*180/Math.PI).toFixed(LENS?0:1)+'°');
+ row(topView?'Horizontal field of view':'Vertical field of view',((Math.atan((M.S/2+M.shift)/M.j)+Math.atan((M.S/2-M.shift)/M.j))*180/Math.PI).toFixed(CRS()?0:1)+'°');
  if(info.A){
   const Aw=info.A,dp=[info.dx,info.dy];
   let ang=Math.atan2(dp[1],dp[0])*180/Math.PI;if(ang>90)ang-=180;if(ang<=-90)ang+=180;
@@ -1786,7 +1802,7 @@ function applyDrag(w){
   if(isFinite(Xh)){
    const r=Math.max(-1,Math.min(1,M.f/(Xh||1e-9)));
    const tilt=Math.max(-TILTLO,Math.min(TILTHI,-Math.asin(r)*180/Math.PI));
-   if(LENS){ // 0.25 degree steps, but quick to respond: a step is taken once the pointer has moved 15% of the way to the next one in the direction it is travelling
+   if(CRS()){ // 0.25 degree steps, but quick to respond: a step is taken once the pointer has moved 15% of the way to the next one in the direction it is travelling
     const st=0.25,cur=+V.tilt,d=tilt-cur;let dir=tiltRawPrev===null||tilt===tiltRawPrev?tiltDir:Math.sign(tilt-tiltRawPrev);dir=dir||Math.sign(d);tiltRawPrev=tilt;tiltDir=dir;
     const n=d*dir>0?Math.floor(Math.abs(d)/st+0.85)*Math.sign(d):0;
     if(n)setVal('tilt',+Math.max(-TILTLO,Math.min(TILTHI,snapTilt(cur)+n*st)).toFixed(3));
@@ -2055,7 +2071,7 @@ addEventListener('scroll',hideTip,{passive:true});addEventListener('resize',()=>
 function getState(){
  const cm=document.getElementById('n_cocmode');
  return{md:LEARN?1:TECH?2:0,tc:TCAM?TCAM.id:null,dg:DIG,dm:DMOD,or:PORTRAIT?1:0,v:topView?1:0,u:imperial?1:0,l:lensKey()||'custom',fl:V.fl,ap:V.ap,h:V.h,cam:V.cam,tilt:V.tilt,focus:V.focus,shift:V.shift,sb:V.shiftb,sensor:V.sensor,circ:V.circ,view:V.view,
-  cm:cm.value,coc:V.coc,cv:curvLvl,fo:fovOnly?1:0,dd:diffOn?1:0,g:GMODE,top:TOP,side:SIDE};
+  cm:cm.value,coc:V.coc,cv:curvLvl,fo:fovOnly?1:0,dd:diffOn?1:0,co:COARSEMOVES?1:0,g:GMODE,top:TOP,side:SIDE};
 }
 const b64e=t=>btoa(unescape(encodeURIComponent(t))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const b64d=t=>decodeURIComponent(escape(atob(t.replace(/-/g,'+').replace(/_/g,'/'))));
@@ -2073,7 +2089,7 @@ function applyState(st){
  V.focus=Math.min(110,Math.max(0,num(st.focus,V.focus)));syncFocus();
  if(['sharp','soft','custom','pixel'].includes(st.cm)){if(st.cm==='custom'){const c=document.getElementById('n_coc');c.value=num(st.coc,0.021);}setCocMode(st.cm);}
  curvLvl=[0,1,2].includes(st.cv)?st.cv:0;curved=curvLvl>0;document.getElementById('n_curv').value=String(curvLvl);updateAuto();
- fovOnly=!!st.fo;document.getElementById('fov-only').checked=fovOnly;diffOn=st.dd===undefined?true:!!st.dd;document.getElementById('diff-on').checked=diffOn;
+ fovOnly=!!st.fo;document.getElementById('fov-only').checked=fovOnly;diffOn=st.dd===undefined?true:!!st.dd;document.getElementById('diff-on').checked=diffOn;COARSEMOVES=!!st.co;document.getElementById('coarse-on').checked=COARSEMOVES;applyCoarse();
  setGround(st.g===1||st.g===2?(st.v?0:st.g):0);
  TOP=Array.isArray(st.top)?st.top:[];SIDE=LEARN?learnObjs():Array.isArray(st.side)?st.side:[];syncObjs();
  focusAnchor=null;tiltAnchor=null;draw();
