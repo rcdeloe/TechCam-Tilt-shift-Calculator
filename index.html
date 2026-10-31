@@ -142,7 +142,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Oct-30 v0.119</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Oct-30 v0.121</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -1470,7 +1470,15 @@ function draw(){
  const camPts=[];
  const poly=(pts,fill,noOx)=>{const q=pts.map(([X,Z])=>pp((noOx?0:ox)+X*k,Z*k));camPts.push(...q);{const xs=q.map(v=>v[0]),ys=q.map(v=>v[1]);obst.push({x:Math.min(...xs)+3,y:Math.min(...ys)+3,w:Math.max(0,Math.max(...xs)-Math.min(...xs)-6),h:Math.max(0,Math.max(...ys)-Math.min(...ys)-6)});}sx.beginPath();q.forEach((v,i)=>i?sx.lineTo(v[0],v[1]):sx.moveTo(v[0],v[1]));sx.closePath();
   if(fill){sx.globalAlpha=0.14;sx.fillStyle=fg;sx.fill();sx.globalAlpha=1;}sx.lineJoin='round';sx.lineWidth=2;sx.strokeStyle=fg;sx.stroke();};
- if(TECH){ // a generic bellows-style rail technical camera: rail, front standard with lens barrel (tilted with the lens), bellows, rear standard and back
+ if(TECH&&TCAM&&TCAM.fixedExt){ // a 'pancake' technical camera (Cambo WRS): no rail or bellows, just thin tilting and shifting plates carrying the lens panel, and a deep back that holds the digital back
+  const th=M.th,c_=Math.cos(th),s_=Math.sin(th),rot=pts=>pts.map(([X,Z])=>[X*c_+Z*s_,-X*s_+Z*c_]); // the lens panel turns with the lens plane
+  if(!topView)poly([[-1.45,-1.9],[-1.9,-1.9],[-1.9,-2.7],[-1.45,-2.7]],true); // tripod plate under the body
+  poly(rot([[-0.6,-0.06],[0.6,-0.06],[0.6,-0.5],[-0.6,-0.5]]),true,true); // lens barrel and its panel mount
+  poly(rot([[-1.45,-0.5],[1.45,-0.5],[1.45,-0.8],[-1.45,-0.8]]),true,true); // lens panel (tilts with the lens)
+  poly([[-1.45,-0.95],[1.45,-0.95],[1.45,-1.25],[-1.45,-1.25]],true); // shift plate
+  poly([[-1.45,-1.4],[1.45,-1.4],[1.45,-1.7],[-1.45,-1.7]],true); // rise/fall plate
+  poly([[-1.45,-1.7],[1.45,-1.7],[1.45,-2.95],[-1.45,-2.95]],true); // body and digital back
+ }else if(TECH){ // a generic bellows-style rail technical camera: rail, front standard with lens barrel (tilted with the lens), bellows, rear standard and back
   const th=M.th,c_=Math.cos(th),s_=Math.sin(th),rot=pts=>pts.map(([X,Z])=>[X*c_+Z*s_,-X*s_+Z*c_]); // the front standard turns with the lens plane
   const rx=topView?[-0.18,0.18]:[-1.8,-1.5];
   poly([[rx[0],0.1],[rx[1],0.1],[rx[1],-3.7],[rx[0],-3.7]],true); // rail
@@ -1886,7 +1894,7 @@ const TIPS={
  caxis:()=>"The camera axis is the line straight out from the middle of the sensor, in the direction the camera is pointing. Focus distance is measured along it, to the small cross where the plane of focus crosses it. With no "+(T()?"swing":"tilt")+" it is the same line as the lens axis.",
  laxis:()=>"The lens axis is the line through the lens centre at right angles to the lens. It turns with the lens, so with "+(T()?"swing":"tilt")+" it points away from the camera axis. Focus distance is measured along the camera axis, not along this line.",
  readout:()=>T()?'Sharp along camera axis: the range of distances along the camera axis (the line straight out from the sensor centre) that is acceptably sharp. Plane crosses camera axis: the focus distance, where the plane of focus crosses the camera axis. Horizontal field of view: the angle the sensor sees from side to side. Frame width at focus: how wide the picture frame is at the focus point. Field curvature: the setting chosen under Additional controls. Airy disc: the smallest spot a perfect lens can form at this aperture, compared with the circle of confusion.':'Plane first meets ground: the nearest place to the camera where the plane of focus meets the ground surface. On uneven ground the plane can meet the surface in more than one place. Vertical field of view: the angle the sensor sees from top to bottom. Frame height at focus: how tall the picture frame is at the focus point. Field curvature: the setting chosen under Additional controls. Airy disc: the smallest spot a perfect lens can form at this aperture, compared with the circle of confusion.',
- link:"Makes a web address (a link) that holds every setting you have now: the view, units, technical camera, digital camera, lens, orientation, ground surface, all the controls and the background objects. Open it in a new browser window or send it to someone to get the same setup. The link is copied to the clipboard, ready to paste. It opens this same page, so the person you send it to needs access to the page. Nothing is stored on a server: the whole setup is in the link.",
+ link:"Makes a web address (a link) that holds every setting you have now: the view, units, technical camera, digital camera, lens, orientation, ground surface, all the controls and the background objects. Open it in a new browser window or send it to someone to get the same setup. The link is copied to the clipboard, ready to paste. It opens the shared version of the tool at rcdeloe.github.io/TechCam-Tilt-shift-Calculator. Nothing is stored on a server: the whole setup is in the link.",
  shot:'Generate and save a summary image of the current view and key parameters as a JPEG or PDF, or copy it to the clipboard as an image.'
 };
 const LTIPS={};
@@ -1999,7 +2007,7 @@ function applyState(st){
  TOP=Array.isArray(st.top)?st.top:[];SIDE=LEARN?learnObjs():Array.isArray(st.side)?st.side:[];syncObjs();
  focusAnchor=null;tiltAnchor=null;draw();
 }
-const SHARE_URL=location.href.split('#')[0]; // links open this same page
+const SHARE_URL='https://rcdeloe.github.io/TechCam-Tilt-shift-Calculator/'; // links open the shared version of the tool on GitHub Pages
 function stateLink(){return SHARE_URL+'#s='+b64e(JSON.stringify(getState()));}
 function restoreFromHash(){
  const m=/^#s=([A-Za-z0-9_-]+)$/.exec(location.hash);if(!m)return;
