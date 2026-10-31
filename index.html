@@ -148,7 +148,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Oct-30 v0.130</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Oct-30 v0.131</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -240,7 +240,7 @@ const DMODELS=[
  {id:'oth5',name:'Other 53.4 \u00d7 40 mm',cls:5,pitch:null,grp:'Medium format backs 53.4 \u00d7 40 mm'}];
 // Estimated values (the yellow cells of the spreadsheets): where a result depends on one, a small tag is shown beside it.
 const EST_LENS={cambo_actar_35:['circ'],pen_a645_35:['circ'],pen_a645_75:['circ'],pen_a645_150:['circ'],pen_p67_55:['circ'],rod_hrdsw_138:['ext'],rod_amsd_120:['ext'],sch_ad_80m:['ext'],sch_ad_120m:['ext']}; // circ: image circle; ext: flange distance or extension used for the infinity check
-const EST_CAM={arca_rm3di:['ext'],arca_m_two_mf:['ext'],alpa_12_plus:['ext'],alpa_12_stc:['ext'],alpa_12_swa:['ext'],cambo_actus_g:['ext'],cambo_actus_mv:['ext'],arca_universalis:['ext'],linhof_techno:['ext'],swebo_tcs20:['ext']}; // ext: the minimum or maximum extension
+const EST_CAM={cambo_wide_ds:['ext'],arca_rm3di:['ext'],arca_m_two_mf:['ext'],alpa_12_plus:['ext'],alpa_12_stc:['ext'],alpa_12_swa:['ext'],cambo_actus_g:['ext'],cambo_actus_mv:['ext'],arca_universalis:['ext'],linhof_techno:['ext'],swebo_tcs20:['ext']}; // ext: the minimum or maximum extension
 const EST_TEXT={tilt:'the tilt and swing limit (taken as 5\u00b0 from Alpa\'s adapter figures)',circ:'the lens image circle (so the shift limit is approximate)',ext:'the extension limits (so the closest focus distance, and whether infinity can be reached, are approximate)',move:'the movement limit set for this lens and camera combination',pitch:'the pixel pitch of this digital camera',size:'the sensor size (a little larger than the size class used, by about 0.5 mm)'};
 const dmodel=id=>DMODELS.find(m=>m.id===id)||null;
 const dmodelOther=cls=>DMODELS.find(m=>m.cls===cls&&m.pitch===null)||null;
@@ -641,8 +641,9 @@ const LENSES={}; // (the Advanced Tilt-Shift example lenses are not part of this
 const CAMERAS=[
  {id:'cambo_actus_g',sensors:['mirrorless'],name:'Cambo Actus G',extMin:15,extMax:134,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
  {id:'cambo_actus_mv',sensors:['mirrorless','back1','back2'],name:'Cambo Actus MV',extMin:25,extMax:298,tiltPos:30,tiltNeg:30,swing:30,up:30,dn:30,shift:40},
- {id:'cambo_wrs1200',sensors:['back1','back2'],name:'Cambo WRS-1200',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:25,dn:15,shift:20}, // like the WRS-1600 but the rear standard falls 25 mm (lens up 25) or rises 15 mm (lens down 15)
- {id:'cambo_wrs1600',sensors:['back1','back2'],name:'Cambo WRS-1600',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:20,dn:20,shift:20}, // no bellows (fixedExt: focus is by the lens panel's helical mount, so the panel's shortest focus distance is used) and no tilt or swing of its own (panelTilt: they come from the lens's tilt/swing panel)
+ {id:'cambo_wide_ds',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo Wide DS',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:0,tiltNeg:0,swing:0,up:34,dn:26,shift:20}, // no tilt or swing (the Cambo sheet lists none); rise 34 mm and fall 26 mm for digital backs; helical focusing on the lens plate, closest focus estimated
+ {id:'cambo_wrs1200',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo WRS-1200',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:25,dn:15,shift:20}, // like the WRS-1600 but the rear standard falls 25 mm (lens up 25) or rises 15 mm (lens down 15)
+ {id:'cambo_wrs1600',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo WRS-1600',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:20,dn:20,shift:20}, // no bellows (fixedExt: focus is by the lens panel's helical mount, so the panel's shortest focus distance is used) and no tilt or swing of its own (panelTilt: they come from the lens's tilt/swing panel)
  // Alpa 12 bodies: no bellows or rail (fixedExt, helical: focus is by the lens's helical mount; dmin is an estimate); tilt and swing come from Alpa adapters (5 deg). Digital backs only, and the back can be rotated, so Landscape and Portrait do not depend on the body.
  // oneAxis: the body shifts along one axis only (amt mm each side). The camera is assumed to be set up for rise/fall in the Tilt and Rise/Fall view and for shift in the Swing and Shift view, so the other movement is greyed out.
  {id:'alpa_12_plus',sensors:['back1','back2'],name:'Alpa 12 Plus',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:5,tiltNeg:5,swing:5,up:20,dn:20,shift:20},
