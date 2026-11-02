@@ -148,7 +148,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-01 v0.208</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-01 v0.209</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -809,7 +809,7 @@ function estRefresh(){ // show or hide the small Estimated tags beside the resul
  if((EST_LENS[lk]||[]).includes('circ'))add('circ',['n_circ','n_shift']);
  const dcam=!!(TCAM&&LENS&&LENS.dminCam&&LENS.dminCam[TCAM.id]>0);
  if(TECH&&TCAM&&LENS&&/^alpa_/.test(TCAM.id)&&!(LENS.dminFix>0)&&!(dcam&&!LENS.dminCamEst))add('dminalpa',['n_focus']); // an Alpa closest focus that is not known
- if(!dcam&&((EST_LENS[lk]||[]).includes('ext')||(TCAM&&(EST_CAM[TCAM.id]||[]).includes('ext'))))add('ext',['n_focus']);
+ if(!dcam&&!(LENS&&LENS.dminFix>0)&&((EST_LENS[lk]||[]).includes('ext')||(TCAM&&(EST_CAM[TCAM.id]||[]).includes('ext'))))add('ext',['n_focus']);
   if(TCAM&&(EST_CAM[TCAM.id]||[]).includes('tilt'))add('tilt',['n_tilt']);
  if(panelOf()&&panelOf().generic)add('panel',['n_tilt','n_focus']);
  if(TCAM&&EXC.some(e=>e.lens===lk&&e.camera===TCAM.id&&(e.digital==null||e.digital===DIG)))add('move',['n_shift']);
