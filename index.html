@@ -149,7 +149,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-04 v0.253</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-04 v0.256</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -222,17 +222,24 @@ const SENSORS=[
  // Technical Camera mode only (the 'Digital camera' choice): a mirrorless camera or a digital back
  {name:'Mirrorless body 32.9mm x 43.8mm',w:43.8,h:32.9},
  {name:'Medium format back 32.9mm x 43.8mm',w:43.8,h:32.9},
- {name:'Medium format back 40mm x 53.4mm',w:53.4,h:40}];
+ {name:'Medium format back 40mm x 53.4mm',w:53.4,h:40},
+ {name:'Mirrorless full frame 24mm x 36mm',w:36,h:24}];
 const SENS_BASE=3; // the first three sensors are shared by Learner and Advanced Tilt-Shift
-const SENS_TECH={mirrorless:3,back1:4,back2:5};
+const SENS_TECH={mirrorless:3,back1:4,back2:5,ff:6}; // ff: full frame mirrorless bodies (36 x 24 mm)
 // Technical Camera mode: the digital camera models. cls is the sensor-size class (an index into SENSORS) that decides which technical cameras and lenses fit; pitch is the pixel pitch in micrometres (null = unknown, so the pixel-level sharpness choice is not offered).
 // Pitch values are from the makers' specifications (Fujifilm, Hasselblad, Phase One IQ flyer and tech specs); the Hasselblad X1D II 50C value is inferred from its 50 MP sensor (unverified). Sensors a little larger than 43.8 x 32.9 or 53.4 x 40 mm are treated as the nearest class.
 const DMODELS=[
- {id:'gfx100',name:'Fujifilm GFX 100 series',cls:3,pitch:3.76,grp:'Mirrorless bodies'},
- {id:'gfx50',name:'Fujifilm GFX 50 series',cls:3,pitch:5.3,grp:'Mirrorless bodies'},
- {id:'x2d',name:'Hasselblad X2D 100C',cls:3,pitch:3.76,grp:'Mirrorless bodies'},
- {id:'x1d2',name:'Hasselblad X1D II 50C',cls:3,pitch:5.3,grp:'Mirrorless bodies'},
- {id:'oth3',name:'Other 43.8 \u00d7 32.9 mm',cls:3,pitch:null,grp:'Mirrorless bodies',hide:true}, // kept only as an internal fallback (and for old saved links); not offered in the menu
+ {id:'gfx100',name:'Fujifilm GFX 100 series',cls:3,pitch:3.76,grp:'Mirrorless bodies',sub:'Medium format'},
+ {id:'gfx50',name:'Fujifilm GFX 50 series',cls:3,pitch:5.3,grp:'Mirrorless bodies',sub:'Medium format'},
+ {id:'x2d',name:'Hasselblad X2D 100C',cls:3,pitch:3.76,grp:'Mirrorless bodies',sub:'Medium format'},
+ {id:'x1d2',name:'Hasselblad X1D II 50C',cls:3,pitch:5.3,grp:'Mirrorless bodies',sub:'Medium format'},
+ {id:'oth3',name:'Other 43.8 \u00d7 32.9 mm',cls:3,pitch:null,grp:'Mirrorless bodies',sub:'Medium format',hide:true}, // kept only as an internal fallback (and for old saved links); not offered in the menu
+ {id:'ffcanon',name:'Canon EOS R5 / R5 Mark II',cls:6,pitch:4.39,mount:'canon',grp:'Mirrorless bodies',sub:'Full frame'},
+ {id:'ffnikon',name:'Nikon Z7 / Z7 II / Z8 / Z9',cls:6,pitch:4.35,mount:'nikon',grp:'Mirrorless bodies',sub:'Full frame'},
+ {id:'ffsonya1',name:'Sony a1 / a1 II',cls:6,pitch:4.16,mount:'sony',grp:'Mirrorless bodies',sub:'Full frame'},
+ {id:'ffsony61',name:'Sony a7R IV / IVA / a7R V / a7CR',cls:6,pitch:3.76,mount:'sony',grp:'Mirrorless bodies',sub:'Full frame'},
+ {id:'ffsony67',name:'Sony a7R VI',cls:6,pitch:3.57,est:'pitch',mount:'sony',grp:'Mirrorless bodies',sub:'Full frame'}, // 66.8 MP; pitch worked out from the sensor size (not published)
+ {id:'ffsigma',name:'Sigma fp L',cls:6,pitch:3.76,mount:'sigma',grp:'Mirrorless bodies',sub:'Full frame'},
  {id:'cfv100',name:'Hasselblad CFV 100C',cls:4,pitch:3.76,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
  {id:'iq350',name:'Phase One IQ3 50 / IQ250 / IQ150',cls:4,pitch:5.3,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
  {id:'iq140',name:'Phase One IQ140',cls:4,pitch:6.0,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
@@ -737,17 +744,17 @@ const LENSES={}; // (the Advanced Tilt-Shift example lenses are not part of this
 // A technical camera that comes in a mirrorless and a digital back version is one entry in the menu: its variants share a group and a gname, and the choice of Digital camera decides which variant (with its own extension range and lens list) is used.
 // comb: true if the camera can combine tilt and swing, false if only one at a time, left out if unknown (not used yet; for a future combined tilt-and-swing view)
 const CAMERAS=[
- {id:'cambo_actus_g',comb:true,sensors:['mirrorless'],name:'Cambo Actus G',extMin:15,extMax:134,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
+ {id:'cambo_actus_g',comb:true,sensors:['mirrorless','ff'],ffMounts:['canon','nikon','sony','sigma'],name:'Cambo Actus G',extMin:15,extMax:134,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
  // Cambo Actus-RF (cambo.com): the Actus-G plus front rise/fall. Front tilt +10/-9, front swing 360, front rise/fall 10/10; rear vertical shift 12/15, rear horizontal shift 20/20 (combined rise 25, fall 22); focus travel 174 mm with a GFX sensor. Minimum extension is an estimate; lens list assumed the same as the Actus G.
- {id:'cambo_actus_rf',comb:true,split:{rearUp:15,rearDn:12},sensors:['mirrorless'],name:'Cambo Actus RF',extMin:15,extMax:174,tiltPos:10,tiltNeg:9,swing:180,up:25,dn:22,shift:20},
+ {id:'cambo_actus_rf',comb:true,split:{rearUp:15,rearDn:12},sensors:['mirrorless','ff'],ffMounts:['canon','nikon','sony','sigma'],name:'Cambo Actus RF',extMin:15,extMax:174,tiltPos:10,tiltNeg:9,swing:180,up:25,dn:22,shift:20},
  // Cambo Actus DB2 (cambo.com): digital backs only; front swing 360 deg and tilt +10/-9 (geared); rear vertical shift 27 mm (12/15, taken as 12 sensor up and 15 sensor down, as for the Actus G), rear horizontal shift 40 mm (20 each side). Extension is not published: 25 to 450 mm is an estimate (shortest-to-longest Actus rail). Lenses: the same as the Actus XL-DB (author).
  {id:'cambo_actus_db2',comb:true,sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock','Cambo'],name:'Cambo Actus DB2',extMin:25,extMax:450,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
  // Cambo Actus-GD (cambo.com): digital backs only. Front tilt +10/-9 and swing 360; rear vertical shift 12/15, rear horizontal shift 20/20; no front rise/fall. Extension 150 mm (standard monorail), 295 (long), 445 (macro): 445 used, as for the DB2. Minimum extension is an estimate. Lens list assumed the same as the Actus DB2.
  {id:'cambo_actus_gd',comb:true,sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock','Cambo'],name:'Cambo Actus GD',extMin:25,extMax:445,tiltPos:10,tiltNeg:9,swing:180,up:15,dn:12,shift:20},
  {id:'cambo_actus_xl_db',sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock','Cambo'],name:'Cambo Actus XL-DB',extMin:25,extMax:420,tiltPos:20,tiltNeg:20,swing:20,up:20,dn:20,shift:25}, // digital backs only; the Cambo page gives front and rear movements together (tilt and swing 20, rise/fall 20 each way, shift 25 each side), taken as the totals; extension: rails from 17 to 42 cm come with it and extension rails exist, so every lens is assumed to fit with the right rail and bellows (420 mm is the longest default rail); the minimum extension is an estimate
  // Cambo Actus XL-35 (cambo.com): swing and tilt +/-20 and rise/fall 20 each way and shift 25 each side on BOTH the front and the rear standard, taken as separate and combinable (totals: tilt and swing 40, rise/fall 40, shift 50). Digital backs and mirrorless bodies. Maximum extension 205 mm is the largest the page gives (Nikon F; 185 Sony E, 201 Canon EOS); the minimum is an estimate.
- {id:'cambo_actus_xl35',rear:{tilt:20,swing:20},comb:true,split:{tiltFront:20,rearUp:20,rearDn:20},sensors:['mirrorless','back1','back2'],name:'Cambo Actus XL-35',extMin:25,extMax:205,tiltPos:40,tiltNeg:40,swing:40,up:40,dn:40,shift:50},
- {id:'cambo_actus_mv',rear:{tilt:15,swing:0},split:{tiltFront:15,rearUp:15,rearDn:15},sensors:['mirrorless','back1','back2'],name:'Cambo Actus MV',extMin:25,extMax:298,tiltPos:30,tiltNeg:30,swing:30,up:30,dn:30,shift:40},
+ {id:'cambo_actus_xl35',rear:{tilt:20,swing:20},comb:true,split:{tiltFront:20,rearUp:20,rearDn:20},sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Cambo Actus XL-35',extMin:25,extMax:205,tiltPos:40,tiltNeg:40,swing:40,up:40,dn:40,shift:50},
+ {id:'cambo_actus_mv',rear:{tilt:15,swing:0},split:{tiltFront:15,rearUp:15,rearDn:15},sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Cambo Actus MV',extMin:25,extMax:298,tiltPos:30,tiltNeg:30,swing:30,up:30,dn:30,shift:40},
  {id:'cambo_wide_ds',comb:true,sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo Wide DS',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:34,dn:26,shift:20}, // no tilt or swing of its own (the Cambo sheet lists none): they come from a lens tilt/swing panel, assumed for every Schneider-Kreuznach and Rodenstock lens; rise 34 mm and fall 26 mm for digital backs; helical focusing on the lens plate, closest focus estimated
  // Cambo WRC-400 (cambo.com): compact body, shift 40 mm total (+/-20), as shift or as rise/fall by turning the camera but not both at once; no tilt or swing of its own (WTS lens panels, as for the WRS cameras); no bellows. Digital backs. Lens options: the same as the WRS-1200 (author).
  {id:'cambo_wrc400',comb:true,rotatable:true,sensors:['back1','back2'],fitMfr:['Schneider-Kreuznach','Rodenstock'],name:'Cambo WRC-400',extMin:0,extMax:0,fixedExt:true,panelTilt:true,tiltPos:5,tiltNeg:5,swing:5,up:0,dn:0,shift:20},
@@ -771,20 +778,20 @@ const CAMERAS=[
  // Arca-Swiss Factum (arca-swiss-usa.com): rise 15 / fall 15 (manual), shift 15 mm with the optional L-bracket (or by turning the camera), tilt +/-5 deg micrometric, swing by turning the unit 90 deg (not combinable). No bellows: helical focus; closest focus is an estimate. Works with the Fujifilm GFX 50R and with digital backs. Lenses: the same as the RM3Di (author).
  {id:'arca_factum',comb:false,rotatable:true,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss Factum',fitMfr:['Hasselblad'],onlyModels:['gfx50'],modelNote:'Only the GFX 50R body is compatible',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:5,tiltNeg:5,swing:5,up:0,dn:0,shift:15},
  {id:'arca_rm3di',comb:false,reversible:true,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss RM3Di',fitMfr:['Hasselblad'],onlyModels:['gfx50'],modelNote:'Only the GFX 50R body is compatible',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:5,tiltNeg:5,swing:5,up:30,dn:20,shift:15},
- {id:'arca_universalis',split:{rearUp:0,rearDn:60},comb:true,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss F-Universalis',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:180,up:30,dn:70,shift:25},
- {id:'arca_m_two_mf',comb:true,sensors:['mirrorless','back1','back2'],name:'Arca-Swiss M-Two MF',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:45,up:35,dn:35,shift:35},
+ {id:'arca_universalis',split:{rearUp:0,rearDn:60},comb:true,sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Arca-Swiss F-Universalis',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:180,up:30,dn:70,shift:25},
+ {id:'arca_m_two_mf',comb:true,sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Arca-Swiss M-Two MF',extMin:15,extMax:125,tiltPos:15,tiltNeg:15,swing:45,up:35,dn:35,shift:35},
  // Arca-Swiss M-Monolith 6x9 (arca-swiss-usa.com): Micro-Orbix tilt +/-15 (the +/-45 base tilt is ignored, at the author's request), swing +/-45, rise/fall +70 mm and shift +/-50 mm, stated for the front AND the rear standard, so the movements are added (rise/fall 35 each way per standard, 70 in all; shift 100 each side); tilt and swing are capped at 45 by the tool. Digital back (6x9 adapter) or mirrorless (Rotafoot). Optical bench 45 cm: 450 mm is the maximum extension; the minimum is an estimate. Lenses: same list as the other Arca-Swiss view cameras (M-Two MF, F-Universalis).
- {id:'arca_m_monolith',rear:{tilt:0,swing:45},comb:true,split:{rearUp:35,rearDn:35},sensors:['mirrorless','back1','back2'],name:'Arca-Swiss M-Monolith',tiltNote:'Uses Micro-Orbix tilt. Base tilt is not available in this tool.',extMin:15,extMax:450,tiltPos:15,tiltNeg:15,swing:45,up:70,dn:70,shift:100},
+ {id:'arca_m_monolith',rear:{tilt:0,swing:45},comb:true,split:{rearUp:35,rearDn:35},sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Arca-Swiss M-Monolith',tiltNote:'Uses Micro-Orbix tilt. Base tilt is not available in this tool.',extMin:15,extMax:450,tiltPos:15,tiltNeg:15,swing:45,up:70,dn:70,shift:100},
  {id:'arca_pico_digital_back',comb:true,sensors:['back1','back2'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico digital back',extMin:35.5,extMax:147.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
- {id:'arca_pico_mirrorless',comb:true,sensors:['mirrorless'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico mirrorless',extMin:46.5,extMax:158.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
+ {id:'arca_pico_mirrorless',comb:true,sensors:['mirrorless','ff'],ffMounts:['canon','nikon','sony','sigma'],group:'arca_pico',gname:'Arca-Swiss Pico',name:'Arca-Swiss Pico mirrorless',extMin:46.5,extMax:158.5,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:20},
  // Phase One XT: 12 mm shift each way on both axes (brochure), tilt +/-3 on the 32/40/50 mm lenses (manufacturer lens data, not in the brochure), helical-focus lenses in the X-Shutter. IQ4 backs only.
  {id:'phase_one_xt',mfr:'Phase One',comb:false,sensors:['back2'],onlyBack:['iq4150','iq3100'],name:'Phase One XT',extMin:0,extMax:0,fixedExt:true,helical:true,dmin:0.3,tiltPos:3,tiltNeg:3,swing:3,up:12,dn:12,shift:12},
  // Linhof Techno: manufacturer figures (ext 20 to 250 mm, tilt/swing +/-10, rise 20 / fall 20, shift 10 each side). Which lenses fit is set in the Lens x Camera sheet of technical-lenses.xlsx.
- {id:'linhof_techno',sensors:['mirrorless','back1','back2'],name:'Linhof Techno',extMin:20,extMax:250,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:10},
+ {id:'linhof_techno',sensors:['mirrorless','ff','back1','back2'],ffMounts:['sony'],name:'Linhof Techno',extMin:20,extMax:250,tiltPos:10,tiltNeg:10,swing:10,up:20,dn:20,shift:10},
  // Swebo TCS20: tilt +/-15, swing +/-20, rear rise/fall +/-30, rear shift +/-30 (manufacturer). Extension range is NOT published: 20 to 200 mm is an estimate (250 mm rail, four-fold bellows).
- {id:'swebo_tcs20',comb:true,sensors:['mirrorless','back1','back2'],name:'Swebo TCS20',extMin:20,extMax:200,tiltPos:15,tiltNeg:15,swing:20,up:30,dn:30,shift:30},
+ {id:'swebo_tcs20',comb:true,sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Swebo TCS20',extMin:20,extMax:200,tiltPos:15,tiltNeg:15,swing:20,up:30,dn:30,shift:30},
  // Swebo TC18 5th gen (swebo.us): front and rear standards each +/-20 deg tilt and swing, +/-35 mm rise/fall and +/-35 mm shift, so totals are +/-40 deg and +/-70 mm. Front standard movements are used first, then rear (the combined-movement notes). 250 mm rail, four-fold bellows; extension limits and closest focus are not published, so the Linhof Techno values (20 to 250 mm) are an ESTIMATE (author).
- {id:'swebo_tc18',rear:{tilt:20,swing:20},comb:true,split:{tiltFront:20,rearUp:35,rearDn:35,frontFirst:true},sensors:['mirrorless','back1','back2'],name:'Swebo TC18',extMin:20,extMax:250,tiltPos:40,tiltNeg:40,swing:40,up:70,dn:70,shift:70},
+ {id:'swebo_tc18',rear:{tilt:20,swing:20},comb:true,split:{tiltFront:20,rearUp:35,rearDn:35,frontFirst:true},sensors:['mirrorless','ff','back1','back2'],ffMounts:['canon','nikon','sony','sigma'],name:'Swebo TC18',extMin:20,extMax:250,tiltPos:40,tiltNeg:40,swing:40,up:70,dn:70,shift:70},
  // MAB II (Custom): all movements on the front standard. Extension 22 to 80 mm, rise 12.5 / fall 12.5, shift 15 each side, tilt and swing +/-15 (author). Lenses: only the ten listed in the Lens x Camera sheet. Mirrorless: Fujifilm GFX only (both GFX series); no digital backs (author). Tilt+swing and shift+rise/fall can be combined (author).
  {id:'mab_ii',mfr:'Custom',rotatable:true,comb:true,combShift:true,sensors:['mirrorless'],onlyModels:['gfx100','gfx50'],modelNote:'Only Fujifilm GFX cameras are compatible',name:'MAB II',accText:'Requires extension tube on the lens.',extMin:22,extMax:80,tiltPos:15,tiltNeg:15,swing:15,up:12.5,dn:12.5,shift:15}];
 let ROT=false,ROTID=null,REV=false,REVID=null; // ROT: the Rotate 90 degrees button is on (only for bodies marked rotatable)
@@ -828,14 +835,14 @@ const panelOf=()=>{if(!(TECH&&TCAM&&TCAM.panelTilt&&LENS))return null;if(LENS.mf
 const camGroup=c=>c.group||c.id,camTitle=c=>c.gname||c.name,variantsOf=c=>CAMERAS.filter(x=>camGroup(x)===camGroup(c));
 const groupSens=c=>[...new Set(variantsOf(c).filter(v=>lensAllows(LENS,v)).flatMap(v=>sensKeys(v)).map(k=>SENS_TECH[k]))]; // the digital cameras any variant of that camera takes with the chosen lens
 const pickVariant=c=>{const vs=variantsOf(c),fit=v=>lensAllows(LENS,v)&&(DIG===null||camAllows(v,DIG));return vs.find(v=>v===c&&fit(v))||vs.find(fit)||vs.find(v=>lensAllows(LENS,v))||c;};
-const sensKeys=(c,L=LENS)=>c.sensors.filter(k=>!(L&&L.nos&&L.nos[c.id]&&L.nos[c.id].includes(k))); // the digital cameras of that technical camera that the lens fits (a few lenses fit only the mirrorless or only the digital backs)
+const sensKeys=(c,L=LENS)=>c.sensors.filter(k=>!(L&&L.nos&&L.nos[c.id]&&(L.nos[c.id].includes(k)||(k==='ff'&&L.nos[c.id].includes('mirrorless'))))) // a lens kept off mirrorless bodies on a camera is kept off full frame bodies too; // the digital cameras of that technical camera that the lens fits (a few lenses fit only the mirrorless or only the digital backs)
 const camAllows=(c,i,L=LENS)=>sensKeys(c,L).some(k=>SENS_TECH[k]===i);
 const lensAllows=(L,c)=>!L||!(L.nocams&&L.nocams.includes(c.id))&&(!L.cams||L.cams.includes(c.id)||!!(c.fitMfr&&c.fitMfr.includes(L.mfr))); // nocams: cameras the author has marked as not taking this lens, which override everything else // a camera may also take every lens of the manufacturers in its fitMfr list, so lenses added later (Hasselblad V, say) fit without editing their camera lists
 // A lens that is the same as another under a different name or maker (Cambo's Actar-Pyrite is the Schneider Pyrite): it is built from the original at load, so any change to the original carries over automatically.
 const LENS_ALIAS={cam_actar_py_90:{from:'sch_py_90',over:{name:'Cambo Actar-Pyrite 90mm f/4.5',mfr:'Cambo',fmt:'Digital'}}};
 for(const [k,a] of Object.entries(LENS_ALIAS)){const o=TLENSES[a.from];TLENSES[k]=Object.assign({},o,a.over,{cams:CAMERAS.filter(c=>lensAllows(o,c)&&/^cambo_/.test(c.id)&&!c.panelTilt).map(c=>c.id)}); // Cambo Actar lenses are for Cambo technical cameras only, and not the panel cameras
  if(EST_LENS[a.from])EST_LENS[k]=EST_LENS[a.from];}
-const modelAllows=(c,m)=>!c||!m||!((c.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!c.onlyBacks.includes(m.id))||(c.onlyBack&&m.cls===SENS_TECH.back2&&!c.onlyBack.includes(m.id))||(c.onlyModels&&m.cls===SENS_TECH.mirrorless&&!c.onlyModels.includes(m.id))) // some cameras take only certain mirrorless bodies (onlyModels: model ids)
+const modelAllows=(c,m)=>!c||!m||!((m.cls===SENS_TECH.ff&&c.ffMounts&&!c.ffMounts.includes(m.mount))||(c.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!c.onlyBacks.includes(m.id))||(c.onlyBack&&m.cls===SENS_TECH.back2&&!c.onlyBack.includes(m.id))||(c.onlyModels&&m.cls===SENS_TECH.mirrorless&&!c.onlyModels.includes(m.id))) // some cameras take only certain mirrorless bodies (onlyModels: model ids)
 const lensOK=L=>{ // can this lens still be chosen, given the technical camera and digital camera chosen so far?
  if(!TECH)return true;if(TCAM&&!CAMAUTO)return variantsOf(TCAM).some(v=>lensAllows(L,v)&&(DIG===null||DIGAUTO||camAllows(v,DIG,L)));if(!L.cams)return true;
  return CAMERAS.some(c=>camVis(c)&&lensAllows(L,c)&&(DIG===null||DIGAUTO||camAllows(c,DIG,L)));}; // a lens may list the technical cameras it fits (cams: [camera ids]); without the list it fits any // can this technical camera use that digital camera?
@@ -1052,21 +1059,23 @@ initCascade(['dig-btn','dig-pop','dig-menu'],'n_sensor','dig');
   else if(pop().hidden&&!(TCAM&&camMfr(TCAM)==='Custom'))setCustom(false);},true); // a Custom camera that is already chosen keeps its group listed
 })();
 initCascade(['cam-btn','cam-pop','cam-menu'],'n_camera','cam');
-const techSensors=()=>TECH?(TCAM?groupSens(TCAM):[SENS_TECH.mirrorless,SENS_TECH.back1,SENS_TECH.back2]):[0,1,2]; // the sensors the mode (and, in Technical Camera mode, the chosen camera) can use
+const techSensors=()=>TECH?(TCAM?groupSens(TCAM):[SENS_TECH.mirrorless,SENS_TECH.ff,SENS_TECH.back1,SENS_TECH.back2]):[0,1,2]; // the sensors the mode (and, in Technical Camera mode, the chosen camera) can use
 const sensFixed=()=>!!(TECH&&TCAM&&groupSens(TCAM).length===1); // a camera that takes only one kind of digital camera: that choice is made for you and greyed
 function buildDigMenu(groups){
  const pop=document.getElementById('dig-pop'),esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;'),lab=m=>m.name+(m.pitch?' \u2013 '+m.pitch+' \u00b5m':''),cur=dmodel(DMOD);
  document.getElementById('dig-btn-txt').textContent=cur?lab(cur):'Choose a camera';
  let h='<ul role="none"><li role="none"><button type="button" role="menuitem" class="mi" data-dig=""'+(cur?'':' aria-current="true"')+'>None chosen</button></li>';
- for(const [g,ms] of groups){
-  h+=`<li role="none"><button type="button" role="menuitem" class="mi" aria-haspopup="menu" aria-expanded="false"><span>${esc(g)}</span><span aria-hidden="true">\u25B8</span></button><ul role="menu" class="flat">`;
-  for(const m of ms)h+=`<li role="none"><button type="button" role="menuitem" class="mi" data-dig="${m.id}"${cur&&m.id===cur.id?' aria-current="true"':''}>${esc(lab(m))}</button></li>`;
-  h+='</ul></li>';}
+ const item=m=>`<li role="none"><button type="button" role="menuitem" class="mi" data-dig="${m.id}"${cur&&m.id===cur.id?' aria-current="true"':''}>${esc(lab(m))}</button></li>`;
+ const fly=(t,inner,flat)=>`<li role="none"><button type="button" role="menuitem" class="mi" aria-haspopup="menu" aria-expanded="false"><span>${esc(t)}</span><span aria-hidden="true">\u25B8</span></button><ul role="menu"${flat?' class="flat"':''}>${inner}</ul></li>`;
+ const body=ms=>{const subs=[...new Set(ms.map(m=>m.sub).filter(Boolean))];if(subs.length<2)return{html:ms.map(item).join(''),flat:true}; // mirrorless bodies are split into Medium format and Full frame, but only when both have something that fits
+  return{html:ms.filter(m=>!m.sub).map(item).join('')+subs.map(sb=>fly(sb,ms.filter(m=>m.sub===sb).map(item).join(''),true)).join(''),flat:false};};
+ if(groups.length===1){h+=body(groups[0][1]).html;} // only one kind of digital camera fits: list it straight away
+ else for(const [g,ms] of groups){const b=body(ms);h+=fly(g,b.html,b.flat);}
  pop.innerHTML=h+'</ul>';
 }
 function fillSensorList(){const n=document.getElementById('n_sensor');if(!n)return;const idx=techSensors();
  if(TECH){ // the models whose size class the chosen camera and lens allow, grouped
-  const groups=[];DMODELS.filter(m=>!m.hide&&idx.includes(m.cls)&&(!TCAM||m.cls!==SENS_TECH.mirrorless||!TCAM.onlyModels||TCAM.onlyModels.includes(m.id))&&!(TCAM&&TCAM.onlyBack&&m.cls===SENS_TECH.back2&&!TCAM.onlyBack.includes(m.id))&&!(TCAM&&TCAM.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!TCAM.onlyBacks.includes(m.id))).forEach(m=>{let g=groups.find(x=>x[0]===m.grp);if(!g)groups.push(g=[m.grp,[]]);g[1].push(m);});
+  const groups=[];DMODELS.filter(m=>!m.hide&&idx.includes(m.cls)&&(!TCAM||m.cls!==SENS_TECH.mirrorless||!TCAM.onlyModels||TCAM.onlyModels.includes(m.id))&&!(TCAM&&TCAM.onlyBack&&m.cls===SENS_TECH.back2&&!TCAM.onlyBack.includes(m.id))&&!(TCAM&&TCAM.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!TCAM.onlyBacks.includes(m.id))&&!(TCAM&&m.cls===SENS_TECH.ff&&!variantsOf(TCAM).some(v=>modelAllows(v,m)))).forEach(m=>{let g=groups.find(x=>x[0]===m.grp);if(!g)groups.push(g=[m.grp,[]]);g[1].push(m);});
   n.innerHTML='<option value="">Choose a camera</option>'+groups.map(([g,ms])=>`<optgroup label="${g}">${ms.map(m=>`<option value="${m.id}">${m.name}${m.pitch?' \u2013 '+m.pitch+' \u00b5m':''}</option>`).join('')}</optgroup>`).join('');
   n.value=DMOD||'';lockRow('n_sensor',false);n.style.display='none';document.getElementById('dig-menu').style.display='';buildDigMenu(groups);return;}
  n.style.display='';document.getElementById('dig-menu').style.display='none';
@@ -2300,7 +2309,7 @@ function applyState(st){
  const num=(x,d)=>typeof x==='number'&&isFinite(x)?x:d;
  
  resetAll();setView(!!st.v);
- if(TECH){CAMAUTO=false;TCAM=CAMERAS.find(c=>c.id===(/^arca_universalis_/.test(st.tc)?'arca_universalis':st.tc))||null;DIG=(typeof st.dg==='number'&&st.dg>=3&&st.dg<=5)?st.dg:null;DMOD=(dmodel(st.dm)&&dmodel(st.dm).cls===DIG)?st.dm:null;equipSync();}
+ if(TECH){CAMAUTO=false;TCAM=CAMERAS.find(c=>c.id===(/^arca_universalis_/.test(st.tc)?'arca_universalis':st.tc))||null;DIG=(typeof st.dg==='number'&&st.dg>=3&&st.dg<=6)?st.dg:null;DMOD=(dmodel(st.dm)&&dmodel(st.dm).cls===DIG)?st.dm:null;equipSync();}
  if(TECH&&window.setOrient)setOrient(st.or===1);
  if(!!st.u!==imperial)setUnits(!!st.u);
  if(st.l&&LSRC()[st.l])setLens(st.l);
