@@ -149,7 +149,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-04 v0.267</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-05 v0.269</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -1282,11 +1282,11 @@ function circGeom(){ // where the image circle sits on the sensor plane and how 
   if(ax!=null&&isFinite(ax)){let d=(LENS.ffd-LENS.fl)-ax;if(TCAM.fixedExt||LENS.dminFix>0)d-=Math.max(0,j*ct-f); // a lens focused by its own helicoid moves forward of its mount as it focuses
    dm=d*Math.sin(ft);}}
  return{uc:j*Math.tan(-ft),cs:Math.max(0.5,j*ct/f),dm};}
-const BODY_SHIFT={gfx100:23,gfx50:23}; // mirrorless bodies: the sensor sits deep in the body, so large movements vignette mechanically. Fujifilm GFX: 23 mm (Rob de Loe); other mirrorless bodies: 25 mm assumed (unknown)
-const bodyShift=()=>{if(!TECH||DIG===null)return Infinity;const m=dmodel(DMOD);if(!m||(m.cls!==SENS_TECH.mirrorless&&m.cls!==SENS_TECH.ff))return Infinity;return BODY_SHIFT[m.id]||25;}; // total movement (rise/fall and shift together, in any direction) allowed by the body, whatever the image circle and the camera allow
-const BODY_SHIFT_NOTE='Mechanical vignetting is assumed to limit shift to 25mm. This may be more or less than the actual maximum, which is unknown.';
-const BODY_SHIFT_GFX='The position of the sensor in the cavity of the GFX body limits total shift to approximately 23mm.';
-const bodyShiftNote=()=>{if(!(TECH&&TCAM&&DIG!==null&&(LENS||LENSCUSTOM)))return '';const b=bodyShift();return !isFinite(b)?'':BODY_SHIFT[DMOD]?BODY_SHIFT_GFX:BODY_SHIFT_NOTE;}; // GFX: the known 23 mm limit; other mirrorless bodies: the assumed 25 mm
+const BODY_SHIFT={gfx100:20,gfx50:20}; // mirrorless bodies: the sensor sits deep in the body, so large movements vignette mechanically. Fujifilm GFX: 20 mm, conservative, since some lenses vignette before 23 mm (Rob de Loe)
+const bodyShift=()=>{if(!TECH||DIG===null)return Infinity;const m=dmodel(DMOD);if(!m||(m.cls!==SENS_TECH.mirrorless&&m.cls!==SENS_TECH.ff))return Infinity;return BODY_SHIFT[m.id]||(m.cls===SENS_TECH.ff?15:20);}; // total movement (rise/fall and shift together, in any direction) allowed by the body. Assumed, as the limit is set by the shutter frame or sensor housing just in front of the sensor (about half the sensor height plus a small margin, scaled from the GFX): Hasselblad X and other 43.8 x 32.9 bodies 20 mm, full frame bodies 15 mm (Rob de Loe, 2026-11-05)
+const bodyShiftNoteFor=n=>'Mechanical vignetting is assumed to limit shift to '+n+'mm. This may be more or less than the actual maximum, which is unknown.';
+const BODY_SHIFT_GFX='The position of the sensor in the cavity of the GFX body limits total shift to approximately 20mm.';
+const bodyShiftNote=()=>{if(!(TECH&&TCAM&&DIG!==null&&(LENS||LENSCUSTOM)))return '';const b=bodyShift();return !isFinite(b)?'':BODY_SHIFT[DMOD]?BODY_SHIFT_GFX:bodyShiftNoteFor(b);}; // GFX: the known 23 mm limit; other mirrorless bodies: the assumed 25 mm
 function updateShiftLimit(){ // the sensor must stay inside the image circle: its far corner is at (half the width across + the other shift, half the height + shift along) the shift direction
  const cg=circGeom(),R=V.circ/2*cg.cs,S=topView?V.sensW:V.sens,P=topView?V.sens:V.sensW;if(!(R>0&&S>0&&P>0))return;
  const offV=topView?-(cg.uc-cg.dm):(cg.uc-cg.dm),rnd=x=>Math.max(0,(TECH?Math.ceil(x*2-1e-9):Math.floor(x*2+1e-9))/2); // offV: the circle's centre, in the direction of this view's movement
