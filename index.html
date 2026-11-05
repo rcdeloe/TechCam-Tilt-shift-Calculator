@@ -149,7 +149,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-05 v0.269</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-05 v0.272</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -353,7 +353,7 @@ function build(id,list){
   d.innerHTML=`<label for="n_${k}">${l}</label><input type="number" id="n_${k}" min="${mn}" max="${mx}" step="${st}" value="${val}"><input type="range" id="r_${k}" aria-label="${l}" min="${mn}" max="${mx}" step="${st}" value="${val}">`;
   box.appendChild(d);
   const n=d.querySelector('[type=number]'),r=d.querySelector('[type=range]');
-  const on=(src,other)=>()=>{const x=parseFloat(src.value);if(isNaN(x))return;other.value=x;const cf=imperial&&UN[k]?UN[k].f:1;const hi=k==='shift'?SHIFTHI:k==='tilt'?TILTHI:mx,lo=k==='shift'?-SHIFTLO:k==='tilt'?-TILTLO:mn;V[k]=Math.min(hi,Math.max(lo,x/cf));const clp=V[k]!==x;if(CRS()&&(k==='shift'||k==='tilt')){const q=k==='tilt'?0.25:0.5;V[k]=Math.round(V[k]/q)*q;}if((k==='shift'||k==='tilt')&&(clp||src===r)){n.value=V[k];r.value=V[k];}draw();};
+  const on=(src,other)=>()=>{const x=parseFloat(src.value);if(isNaN(x))return;other.value=x;const cf=imperial&&UN[k]?UN[k].f:1;const hi=k==='shift'?SHIFTHI:k==='tilt'?tiltHi():mx,lo=k==='shift'?-SHIFTLO:k==='tilt'?-tiltLo():mn;V[k]=Math.min(hi,Math.max(lo,x/cf));const clp=V[k]!==x;if(CRS()&&(k==='shift'||k==='tilt')){const q=k==='tilt'?0.25:0.5;V[k]=Math.round(V[k]/q)*q;}if((k==='shift'||k==='tilt')&&(clp||src===r)){n.value=V[k];r.value=V[k];}draw();};
   n.addEventListener('input',on(n,r));r.addEventListener('input',on(r,n));
   if(k==='shift'||k==='tilt')n.addEventListener('change',()=>{n.value=V[k];r.value=V[k];}); // a typed value settles on the nearest allowed step
  });
@@ -460,7 +460,7 @@ function autoScore(nx,ny,N){
 }
 function autoTiltFocus(){
  // every other setting, including scene width, stays as it is. Tilt is searched in whole and half degrees, and the focus distance in whole and half metres (feet when imperial), plus infinity
- const unit=imperial?1/FT:1,tls=[];for(let t=0;t<=TILTHI+1e-9;t+=0.5)tls.push(t); // positive tilt only
+ const unit=imperial?1/FT:1,tls=[];for(let t=0;t<=tiltHi()+1e-9;t+=0.5)tls.push(t); // positive tilt only, within what the camera and the image circle (at the current rise/fall and shift) allow
  const foc=[];for(let v=Math.ceil(DMIN/unit*2-1e-9)/2;v<=(imperial?300:100)+1e-9;v+=0.5){const m=v*unit;if(m>=DMIN-1e-9)foc.push({v,p:distToPct(m)});}foc.push({v:Infinity,p:100});
  const score=(tl,f,a,b,c)=>{V.tilt=tl;V.focus=f.p;return autoScore(a,b,c);};
  const search=()=>{const first=[];for(const tl of tls)for(const f of foc)first.push({tl,f,s:score(tl,f,40,25,120)});
@@ -519,7 +519,12 @@ async function takeScreenshot(fmt,small){ // small: Shift-click or long press on
  const sumFont=`${13*k}px system-ui,sans-serif`,sctx=document.createElement('canvas').getContext('2d');sctx.font=sumFont;
  const sumLines=[];{let cur='';for(const w of summaryText().split(' ')){const tt=cur?cur+' '+w:w;if(cur&&sctx.measureText(tt).width>iw){sumLines.push(cur);cur=w;}else cur=tt;}if(cur)sumLines.push(cur);}
  const sumLH=19*k,sumH=sumLines.length*sumLH+10*k;
- const ip=14*k,cx=pad+ip,p1y=pad+titleH,p1h=2*ip+ih+lgH+sumH; // one rounded panel: the picture, its legend and a plain-language summary
+ // the notes that apply to this setup (the '!' bubbles beside the labels), so a shared picture carries its caveats
+ notesRefresh();const notes=TECH?[...new Set(Object.values(NOTE_GROUPS).flatMap(g=>(g.text||'').split('\n\n')).map(x=>x.trim()).filter(Boolean))]:[];
+ const noteFont=`${12*k}px system-ui,sans-serif`,nctx=document.createElement('canvas').getContext('2d');nctx.font=noteFont;const noteLines=[];
+ notes.forEach(nt=>{let cur='\u2022 ';for(const w of nt.split(' ')){const tt=cur.endsWith(' ')?cur+w:cur+' '+w;if(cur.trim()!=='\u2022'&&nctx.measureText(tt).width>iw){noteLines.push(cur);cur='   '+w;}else cur=tt;}noteLines.push(cur);});
+ const noteLH=17*k,noteH=noteLines.length?(noteLines.length+1)*noteLH+10*k:0;
+ const ip=14*k,cx=pad+ip,p1y=pad+titleH,p1h=2*ip+ih+lgH+sumH+noteH; // one rounded panel: the picture, its legend and a plain-language summary
  const c=document.createElement('canvas');c.width=Math.round(iw+2*ip+2*pad);c.height=Math.round(p1y+p1h+footH+pad-6*k);
  const g=c.getContext('2d'),fg=css('--fg'),muted=css('--muted'),line=css('--line');
  g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
@@ -536,6 +541,7 @@ async function takeScreenshot(fmt,small){ // small: Shift-click or long press on
   else{g.setLineDash(sty.map(v=>v*k));g.lineCap=sty[0]<2?'round':'butt';g.beginPath();g.moveTo(x,y);g.lineTo(x+26*k,y);g.stroke();}
   g.restore();g.fillStyle=muted;g.font=lgFont;g.textBaseline='middle';g.fillText(it.t,x+32*k,y);if(it.t.startsWith('Hinge')){g.fillStyle=css('--green');g.beginPath();g.arc(x+32*k+mctx.measureText(it.t).width+11*k,y,5*k,0,7);g.fill();}g.textBaseline='top';});
  g.fillStyle=fg;g.font=sumFont;g.textBaseline='top';sumLines.forEach((s,n)=>g.fillText(s,cx,p1y+ip+ih+lgH+10*k+n*sumLH));
+ if(noteLines.length){const y0=p1y+ip+ih+lgH+sumH+6*k;g.font=`bold ${12*k}px system-ui,sans-serif`;g.fillStyle=fg;g.fillText('Notes',cx,y0);g.font=noteFont;g.fillStyle=muted;noteLines.forEach((s,n)=>g.fillText(s,cx,y0+(n+1)*noteLH));}
  g.fillStyle=muted;g.font=`${12*k}px system-ui,sans-serif`;g.textAlign='right';g.fillText('Created using TechCam Tilt-Shift Calculator by Rob de Loë',pad+iw,c.height-pad-12*k);g.textAlign='left';
  // exactly 3400 pixels wide (8.5 in at 400 ppi) and no taller than 4400 (11 in); a final nudge if rounding left it a pixel off
  let fc=c;{const f=Math.min(3400/c.width,4400/c.height);if(Math.abs(f-1)>1e-9){fc=document.createElement('canvas');fc.width=Math.round(c.width*f);fc.height=Math.round(c.height*f);const fg2=fc.getContext('2d');fg2.imageSmoothingQuality='high';fg2.drawImage(c,0,0,fc.width,fc.height);}}
@@ -1115,7 +1121,7 @@ LENS=L;if(L)LENSCUSTOM=false;document.getElementById('n_lens').value=L?id:'custo
  if(TECH)fillLensList();
  designNote();
 } // the shift limit is recalculated at the start of model(), on the next draw
-function resetAll(keepEquip){ // everything back to its default (using the defaults for the current units); the units are left as they are
+function resetAll(keepEquip){CLAMPN.a=CLAMPN.b=''; // everything back to its default (using the defaults for the current units); the units are left as they are
  const keep=(keepEquip&&TECH)?{lens:lensKey(),fl:V.fl,cm:document.getElementById('n_cocmode').value,cv:document.getElementById('n_coc').value}:null; // a change of view keeps the Camera setup (camera, digital camera, lens, focal length) and the circle of confusion
  setLens(LEARN?'c50':keep?keep.lens:'custom');setGround(0);
  for(const k in DEF)if(k!=='focus'&&k!=='coc')setVal(k,defVal(k,imperial));
@@ -1287,26 +1293,52 @@ const bodyShift=()=>{if(!TECH||DIG===null)return Infinity;const m=dmodel(DMOD);i
 const bodyShiftNoteFor=n=>'Mechanical vignetting is assumed to limit shift to '+n+'mm. This may be more or less than the actual maximum, which is unknown.';
 const BODY_SHIFT_GFX='The position of the sensor in the cavity of the GFX body limits total shift to approximately 20mm.';
 const bodyShiftNote=()=>{if(!(TECH&&TCAM&&DIG!==null&&(LENS||LENSCUSTOM)))return '';const b=bodyShift();return !isFinite(b)?'':BODY_SHIFT[DMOD]?BODY_SHIFT_GFX:bodyShiftNoteFor(b);}; // GFX: the known 23 mm limit; other mirrorless bodies: the assumed 25 mm
-function updateShiftLimit(){ // the sensor must stay inside the image circle: its far corner is at (half the width across + the other shift, half the height + shift along) the shift direction
- const cg=circGeom(),R=V.circ/2*cg.cs,S=topView?V.sensW:V.sens,P=topView?V.sens:V.sensW;if(!(R>0&&S>0&&P>0))return;
+function shiftRoom(t){ // the ranges of both movements with tilt (or swing) t and the other settings as they are: hi/lo for the movement this view shows (a), bhi/blo for the other (b). The sensor must stay inside the image circle: its far corner is at (half the width across + the other movement, half the height + movement along) the movement's direction
+ const t0=V.tilt;V.tilt=t;try{
+ const cg=circGeom(),R=V.circ/2*cg.cs,S=topView?V.sensW:V.sens,P=topView?V.sens:V.sensW;if(!(R>0&&S>0&&P>0))return null;
  const offV=topView?-(cg.uc-cg.dm):(cg.uc-cg.dm),rnd=x=>Math.max(0,(TECH?Math.ceil(x*2-1e-9):Math.floor(x*2+1e-9))/2); // offV: the circle's centre, in the direction of this view's movement
  const open=TECH&&!TCAM&&!LENS&&DIG===null; // nothing chosen yet: the image circle does not narrow the movements, so they reach the open limits
  const lim=(s,p,o)=>{if(open)return Infinity;const x=(Math.sqrt(Math.max(0,R*R-(o+p/2)*(o+p/2)))-s/2)*2;return Math.max(0,(TECH?Math.ceil(x-1e-9):Math.floor(x+1e-9))/2);}; // largest movement along a side of length s, with another movement o across it, in 0.5 mm steps. Technical Camera mode rounds up (users of these lenses know there is a little more room than the maker states); the other modes round down
- let aUp=SHUP,aDn=SHDN,x={rad:Infinity};
+ let aUp=SHUP,aDn=SHDN,x={rad:Infinity},bhi=SBHI,blo=SBLO;
  if(TECH){ // the movement the view does not show (b) has its own range: the camera's, the exceptions' and the image circle's; it in turn limits the movement the view shows (a)
   let bUp=LENSSHIFT,bDn=LENSSHIFT;x=excCaps();x.rad=Math.min(x.rad,bodyShift()); // the mirrorless body's own limit works like an exception's total-movement circle
   if(TCAM){const mv=cmv(TCAM);if(topView){bUp=Math.min(mv.up,x.up);bDn=Math.min(mv.dn,x.dn);aUp=Math.min(aUp,x.shift);aDn=Math.min(aDn,x.shift);}
    else{bUp=bDn=Math.min(mv.shift,x.shift);aUp=Math.min(aUp,x.up);aDn=Math.min(aDn,x.dn);}}
-  const mb=Math.min(lim(P,S,0),isFinite(x.rad)?Math.floor(x.rad*2+1e-9)/2:Infinity);SBHI=Math.min(bUp,mb);SBLO=Math.min(bDn,mb);
-  if(V.shiftb>SBHI||V.shiftb<-SBLO){V.shiftb=V.shiftb>SBHI?SBHI:-SBLO;for(const id of['n_shiftb','r_shiftb']){const e=document.getElementById(id);if(e)e.value=V.shiftb;}}
+  const eA=Math.abs(V.shift-offV),mb=Math.min(lim(P,S,eA),isFinite(x.rad)?Math.floor(Math.sqrt(Math.max(0,x.rad*x.rad-V.shift*V.shift))*2+1e-9)/2:Infinity);bhi=Math.min(bUp,mb);blo=Math.min(bDn,mb); // the other movement's room depends on where the sensor sits along this view's direction: the movement in use (V.shift) and the circle's offset from tilt or swing (offV) put a sensor edge nearer the circle's edge, so its corners leave less room across; a total-movement limit (exception or mirrorless body) is a circle around the lens's rest position
  }
  const o=TECH?Math.abs(V.shiftb):0;
  const raw=open?Infinity:Math.max(0,Math.sqrt(Math.max(0,R*R-(o+P/2)*(o+P/2)))-S/2),exr=isFinite(x.rad)?Math.floor(Math.sqrt(Math.max(0,x.rad*x.rad-o*o))*2+1e-9)/2:Infinity; // raw: movement from the circle's centre to its edge (unrounded); an exception's circle: the two movements together stay within its radius
- let m=Math.min(LENSSHIFT,lim(S,P,o),exr);
+ const m=Math.min(LENSSHIFT,lim(S,P,o),exr);
  const hi=Math.min(LENSSHIFT,exr,isFinite(raw)?rnd(raw+offV):Infinity,aUp),lo=Math.min(LENSSHIFT,exr,isFinite(raw)?rnd(raw-offV):Infinity,aDn); // the circle's centre may sit off the sensor's centre (front tilt or swing), so one side can have more room than the other // the camera may allow more movement up than down (or the reverse); the image circle limits both
+ return{hi,lo,bhi,blo,m};}finally{V.tilt=t0;}
+}
+let CTHI=Infinity,CTLO=Infinity,CTKEY=''; // Technical Camera mode: tilt (or swing) allowed by the image circle with the rise/fall and shift now set, each side; the camera's own limits are TILTHI/TILTLO
+const tiltHi=()=>Math.min(TILTHI,CTHI),tiltLo=()=>Math.min(TILTLO,CTLO);
+const CLAMPN={a:'',b:''}; // a note when a change of focus distance had to reduce a movement (the image circle is smaller on the sensor when focused farther)
+let LASTFOC=null;
+function clampNoteFor(which,val){const nm=which==='a'?(topView?'Shift':'Rise/fall'):(topView?'Rise/fall':'Shift');return nm+' reduced to '+(+Math.abs(val).toFixed(1))+' mm: the image circle is smaller on the sensor at this focus distance.';}
+function circTiltNote(){ // beside Tilt (Swing): when the image circle, at the rise/fall and shift now set, stops tilt short of the camera's limit
+ if(!TECH||!(CTHI<TILTHI-1e-9||CTLO<TILTLO-1e-9))return '';const f=v=>(+v.toFixed(2)).toString().replace('-','\u2212');
+ return (topView?'Swing':'Tilt')+' is limited to '+f(-tiltLo())+'\u00b0 to '+f(tiltHi())+'\u00b0 by the image circle at the current rise/fall and shift.';}
+function tiltCircleLimits(){ // how far tilt (or swing) can go, each way, before the sensor at the current rise/fall and shift would leave the image circle. Tilting moves the circle across the sensor, so tilt stops there instead of reducing the movements behind the user's back
+ if(!TECH||!(LENS||LENSCUSTOM)||!TCAM||DIG===null){CTHI=CTLO=Infinity;CTKEY='';return;}
+ const key=[V.shift,V.shiftb,V.focus,V.fl,V.circ,V.sens,V.sensW,TILTHI,TILTLO,topView,REAR,lensKey(),DMOD,SHUP,SHDN,LENSSHIFT].join();if(key===CTKEY)return;CTKEY=key;
+ const ok=t=>{const r=shiftRoom(t);return !r||(V.shift<=r.hi+1e-9&&-V.shift<=r.lo+1e-9&&V.shiftb<=r.bhi+1e-9&&-V.shiftb<=r.blo+1e-9);};
+ const far=(sg,cap)=>{if(!(cap>0))return 0;let t=0;const st=0.5;while(t+st<=cap+1e-9&&ok(sg*(t+st)))t+=st; // coarse search in half degrees, then to 0.05 degree
+  if(t+1e-9<cap){let f=0.05;while(t+f<=Math.min(cap,t+st)+1e-9&&ok(sg*(t+f)))t=+(t+f).toFixed(2);}return t>=cap-1e-9?Infinity:t;};
+ CTHI=far(1,TILTHI);CTLO=far(-1,TILTLO);
+}
+function updateShiftLimit(){
+ let r=shiftRoom(V.tilt);if(!r)return;
+ const focCh=LASTFOC!==null&&LASTFOC!==V.focus;LASTFOC=V.focus;
+ if(TECH){SBHI=r.bhi;SBLO=r.blo;
+  if(V.shiftb>SBHI||V.shiftb<-SBLO){V.shiftb=V.shiftb>SBHI?SBHI:-SBLO;if(focCh)CLAMPN.b=clampNoteFor('b',V.shiftb);for(const id of['n_shiftb','r_shiftb']){const e=document.getElementById(id);if(e)e.value=V.shiftb;}r=shiftRoom(V.tilt);}}
+ const hi=r.hi,lo=r.lo,m=r.m;
  const key=[hi,lo,SBHI,SBLO].join();
  if(key!==SHLIMKEY){SHLIMKEY=key;SHIFTMAX=m;SHIFTHI=hi;SHIFTLO=lo;for(const id of['n_shift','r_shift']){const e=document.getElementById(id);if(e){e.min=-lo;e.max=hi;}}for(const id of['n_shiftb','r_shiftb']){const e=document.getElementById(id);if(e){e.min=-SBLO;e.max=SBHI;}}}
- if(V.shift>SHIFTHI||V.shift<-SHIFTLO){V.shift=V.shift>SHIFTHI?SHIFTHI:-SHIFTLO;for(const id of['n_shift','r_shift']){const e=document.getElementById(id);if(e)e.value=V.shift;}}
+ if(V.shift>SHIFTHI||V.shift<-SHIFTLO){V.shift=V.shift>SHIFTHI?SHIFTHI:-SHIFTLO;if(focCh)CLAMPN.a=clampNoteFor('a',V.shift);for(const id of['n_shift','r_shift']){const e=document.getElementById(id);if(e)e.value=V.shift;}}
+ tiltCircleLimits();
+ {const th=tiltHi(),tl=tiltLo();for(const id of['n_tilt','r_tilt']){const e=document.getElementById(id);if(e&&(+e.max!==th||+e.min!==-tl)){e.min=-tl;e.max=th;}}}
  greyMoves();
 }
 function greyMoves(){ // Technical Camera mode: a movement the camera (with this lens) does not have is greyed out, so its slider cannot be used
@@ -2012,11 +2044,11 @@ function applyDrag(w){
   const Xh=isFinite(Zc)?(Math.abs(Zc-Zt)<1e-6?NaN:Xt*Zc/(Zc-Zt)):Xt;
   if(isFinite(Xh)){
    const r=Math.max(-1,Math.min(1,M.f/(Xh||1e-9)));
-   const tilt=Math.max(-TILTLO,Math.min(TILTHI,-Math.asin(r)*180/Math.PI));
+   const tilt=Math.max(-tiltLo(),Math.min(tiltHi(),-Math.asin(r)*180/Math.PI));
    if(CRS()){ // 0.25 degree steps, but quick to respond: a step is taken once the pointer has moved 15% of the way to the next one in the direction it is travelling
     const st=0.25,cur=+V.tilt,d=tilt-cur;let dir=tiltRawPrev===null||tilt===tiltRawPrev?tiltDir:Math.sign(tilt-tiltRawPrev);dir=dir||Math.sign(d);tiltRawPrev=tilt;tiltDir=dir;
     const n=d*dir>0?Math.floor(Math.abs(d)/st+0.85)*Math.sign(d):0;
-    if(n)setVal('tilt',+Math.max(-TILTLO,Math.min(TILTHI,snapTilt(cur)+n*st)).toFixed(3));
+    if(n)setVal('tilt',+Math.max(-tiltLo(),Math.min(tiltHi(),snapTilt(cur)+n*st)).toFixed(3));
    }else setVal('tilt',+tilt.toFixed(3));
   }
  }
@@ -2141,7 +2173,7 @@ const T=()=>topView;
 const TIPS={
  camera:"Choose a technical camera from the menu. The camera sets how far tilt, swing, rise/fall and shift can go and how far the bellows or rail extends, which sets how near and how far the lens can focus. If you choose a digital camera or lens first, only technical cameras that fit are listed. Movements that cannot be used with your choice are greyed out.",
  about:"TechCam Tilt-Shift Calculator shows how tilt, swing, rise/fall and shift on a technical camera set the plane of focus and the zone of acceptable sharpness. To use the tool, first choose a technical camera, a digital camera, and a lens. The tool only allows combinations that actually work, and your camera and lens choices determine the limits of movements.\n\nFor details about how the tool works, and its limitations, please see the Technical Summary.\n\nTechCam Tilt-Shift Calculator is © Rob de Loë",
- cam:"The tool assumes the camera is on a tripod. Tilt, swing, rise/fall and shift move the lens (the front standard); the sensor stays where it is. The position and orientation of the camera can be adjusted using the controls.",
+ cam:"The tool assumes the camera is on a tripod. Tilt, swing, rise/fall and shift move the lens (the front standard); the sensor stays where it is, unless rear standard tilt or swing is turned on, or the camera combines rear and front rise/fall. The position and orientation of the camera can be adjusted using the controls.",
  focus:"Change focus by dragging the red circle.",
  tilt:()=>T()?"Change the swing angle by dragging the green diamond.":"Change the tilt angle by dragging the green diamond.",
  fov:()=>"Field of view is determined by the chosen focal length, the digital camera's sensor and the camera orientation. The teal shading for the acceptably sharp area extends beyond it, to the edge of the lens's image circle (the lens forms an image beyond the sensor, and "+(T()?"shift":"rise/fall")+" moves the sensor within it). The shading can be limited to the field of view using a check box under Additional controls.",
@@ -2158,14 +2190,14 @@ const TIPS={
  h:"In Tilt and Rise/Fall view, choose the height of the camera relative to the ground.",
  orient:"Landscape (the default) mounts the camera with the long side of the sensor horizontal. Portrait turns the camera 90 degrees, so the long side is vertical. This changes the field of view and contributes to how much shift is available relative to the image circle.",
  cam_c:()=>T()?"Pan the camera and lens left or right. Panning the camera changes perspective.":"Camera pitch leans the whole camera and lens up or down: positive values point the camera down, negative values point it up. Unlike tilt, which moves only the lens, it moves the sensor too, and it changes perspective.",
- tilt_c:()=>T()?"Swing turns the lens about a vertical axis, which turns the plane of focus; the sensor does not move. At 0 degrees the lens works like a non-swinging lens. Positive and negative values can be used, up to the limit the camera (or sometimes a special adapter) allows. You can also drag the green diamond.":"Tilt turns the lens about a horizontal axis, which tilts the plane of focus; the sensor does not move. At 0 degrees the lens works like a non-tilting lens. Positive and negative values can be used, up to the limit the camera (or sometimes a special adapter) allows. You can also drag the green diamond.",
+ tilt_c:()=>T()?"Swing turns the lens about a vertical axis, which turns the plane of focus; the sensor does not move unless rear standard swing is turned on. At 0 degrees the lens works like a non-swinging lens. Positive and negative values can be used, up to the limit the camera (or sometimes a special adapter) allows. Swinging the lens also moves its image circle across the sensor, so it reduces the shift available in one direction; with shift or rise/fall set, swing stops where the sensor would leave the image circle. You can also drag the green diamond.":"Tilt turns the lens about a horizontal axis, which tilts the plane of focus; the sensor does not move unless rear standard tilt is turned on. At 0 degrees the lens works like a non-tilting lens. Positive and negative values can be used, up to the limit the camera (or sometimes a special adapter) allows. Tilting the lens also moves its image circle across the sensor, so it reduces the rise/fall available in one direction; with rise/fall or shift set, tilt stops where the sensor would leave the image circle. You can also drag the green diamond.",
  focus_c:()=>'Choose where the plane of focus crosses the camera axis (the line straight out from the sensor centre, which is also the lens axis when there is no '+(T()?'swing':'tilt')+'), from the closest focus distance of '+fmtD(DMIN)+(LENS?' for the '+LENS.name:' (Custom)')+' out to infinity. Type a distance, or use the arrows beside the box or the arrow keys to step by '+(imperial?'3 ft':'1 m')+' at a time. Clear the box to focus at infinity. The slider can go slightly past infinity.',
- shiftb:()=>T()?"This control does not change the picture in this view. It is the other movement, rise/fall (the view from above shows only swing and shift). Enter the amount you are using, because the sensor has to stay inside the lens image circle: the more rise/fall you use, the less shift is available. The most you can enter is limited by the camera, the lens image circle and the sensor.":"This control does not change the picture in this view. It is the other movement, sideways shift (the side view shows only tilt and rise/fall). Enter the amount you are using, because the sensor has to stay inside the lens image circle: the more shift you use, the less rise/fall is available. The most you can enter is limited by the camera, the lens image circle and the sensor.",
- shift_c:()=>T()?"Shift moves the lens sideways while the camera stays fixed. It changes the framing, not the perspective; the plane of focus moves with the lens by the same small amount. The range is determined by the camera, the lens's image circle, the sensor and its orientation, the focus distance, and the amount of swing applied, because swinging the lens moves its image circle across the sensor. The tool does not currently account for the shift caused by swing when the lens's rear nodal point is not on the swing axis.":"Rise/fall raises or lowers the lens while the camera stays fixed. It changes the framing, not the perspective; the plane of focus moves with the lens by the same small amount (a few centimetres at most). The range is determined by the camera, the lens's image circle, the sensor and its orientation, the focus distance, and the amount of tilt applied, because tilting the lens moves its image circle across the sensor. The tool does not currently account for the rise/fall caused by tilt when the lens's rear nodal point is not on the tilt axis.",
+ shiftb:()=>T()?"This control does not change the picture in this view. It is the other movement, rise/fall (the view from above shows only swing and shift). Enter the amount you are using, because the sensor has to stay inside the lens image circle: the more rise/fall you use, the less shift is available. Shift, and the movement of the image circle caused by swing, also reduce the rise/fall available. The most you can enter is limited by the camera, the lens image circle, the sensor and, on a mirrorless body, the position of its sensor.":"This control does not change the picture in this view. It is the other movement, sideways shift (the side view shows only tilt and rise/fall). Enter the amount you are using, because the sensor has to stay inside the lens image circle: the more shift you use, the less rise/fall is available. Rise/fall, and the movement of the image circle caused by tilt, also reduce the shift available. The most you can enter is limited by the camera, the lens image circle, the sensor and, on a mirrorless body, the position of its sensor.",
+ shift_c:()=>T()?"Shift moves the lens sideways while the camera stays fixed. It changes the framing, not the perspective; the plane of focus moves with the lens by the same small amount. The amount of shift possible is determined by several factors: technical camera shift mechanism; size of the lens's image circle; sensor size and orientation; focus distance; position of the sensor in a mirrorless body; and amount of swing applied, because swinging the lens moves its image circle across the sensor. The tool does not currently account for the shift caused by swing when the lens's rear nodal point is not on the swing axis.":"Rise/fall raises or lowers the lens while the camera stays fixed. It changes the framing, not the perspective; the plane of focus moves with the lens by the same small amount (a few centimetres at most). The amount of rise/fall possible is determined by several factors: technical camera rise/fall mechanism; size of the lens's image circle; sensor size and orientation; focus distance; position of the sensor in a mirrorless body; and amount of tilt applied, because tilting the lens moves its image circle across the sensor. The tool does not currently account for the rise/fall caused by tilt when the lens's rear nodal point is not on the tilt axis.",
  view_c:()=>T()?'Sets how much of the scene is shown in the distance direction. Use a larger value to see more of the scene, or a smaller one to zoom in. It can be set from '+(imperial?'15 ft to 325 ft':'5 m to 100 m')+'; the slider is on a logarithmic scale, so small widths are as easy to set as large ones.':'Sets how much of the scene is shown across the display. Use a larger value to see more of the scene, or a smaller one to zoom in. It can be set from '+(imperial?'15 ft to 325 ft':'5 m to 100 m')+'; the slider is on a logarithmic scale, so small widths are as easy to set as large ones.',
  units:'Switch between Metric and Imperial units.',
  sensor:"Choose a mirrorless camera or a digital back from the menu. If you choose the technical camera first, only digital cameras that work with your technical camera will be available. The digital camera you choose sets the sensor size, the field of view, the frame size in the results and the values of the circle of confusion. Some digital camera choices also limit the lenses you can use.",
- circ:"The image circle is the round area of usable image that the lens projects. Image circle values used in this tool are based on manufacturer specifications, or estimates derived from the film format (for medium format lenses). The actual usable image circle may be a bit larger than specified. The sensor sees only part of the image circle, and rise/fall or shift moves the sensor around inside it, so a larger circle allows more movement before the picture runs out of image. Beyond the circle the tool treats the lens as forming no image. With a lens chosen, the image circle is set by the lens and locked; otherwise enter your own (the default is 85 mm). Image circle is independent of the digital camera. An est. tag means the lens image circle is an estimate.",
+ circ:"The image circle is the round area of usable image that the lens projects. Image circle values used in this tool are based on manufacturer specifications, or estimates derived from the film format (for medium format lenses). The actual usable image circle may be a bit larger than specified. The sensor sees only part of the image circle, and rise/fall or shift moves the sensor around inside it, so a larger circle allows more movement before the picture runs out of image. Focusing closer enlarges the circle on the sensor; tilting or swinging the lens moves it. Beyond the circle the tool treats the lens as forming no image. With a lens chosen, the image circle is set by the lens and locked; otherwise enter your own (the default is 85 mm). Image circle is independent of the digital camera. An est. tag means the lens image circle is an estimate.",
  shade:'The teal shading shows how sharp each point is: the darker the shading, the sharper the point. With diffraction included (the default), the blur at a point is the defocus blur of the lens combined with the Airy disc, the smallest spot even a perfect lens can form at the chosen aperture. That total is smallest on the plane of focus, so the shading is darkest there, and it grows steadily with distance from the plane, so the shading fades smoothly through the solid teal lines and beyond them. The lines mark where defocus blur alone reaches the circle of confusion, so they do not account for diffraction. As the aperture is closed the Airy disc grows and the whole zone becomes lighter, because even the plane of focus is no longer as sharp. With the box under Additional controls unchecked, the shading shows defocus blur alone.',
  diff:'When checked (the default), the sharpness shading includes diffraction as well as defocus blur: the blur at each point is the defocus blur combined with the Airy disc. Uncheck it to shade by defocus blur alone, which is what a simple depth-of-field calculation does. The ground bar follows the shading. The solid teal lines and the hyperfocal distance always use defocus blur alone. Auto Tilt/Focus counts a point as sharp using defocus blur alone when this box is unchecked, and defocus blur combined with the Airy disc when it is checked (if the Airy disc alone is larger than the circle of confusion, so that nothing could count as sharp, it uses defocus blur alone).',
  coc:"The largest blur spot on the sensor that still counts as acceptably sharp, in mm. It sets the teal limits of acceptable sharpness: a smaller value is stricter and makes the sharp zone narrower. Sharp and Soft are scaled to the digital camera's sensor by its diagonal, so each setting means the same degree of sharpness in a print of the same size: for a full frame sensor Sharp is 0.011 mm and Soft is 0.021 mm, and a larger sensor gets proportionally larger values. The values are shown in the list. Pixel level (2 \u00d7 pitch) is extremely conservative. This option appears when the chosen digital camera has a known pixel pitch. Because it is stricter than Sharp on the finest-pitch cameras, the sharp zone is roughly half as thick. Custom lets you enter your own value in mm, which is not scaled.",
@@ -2214,7 +2246,7 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
   const b=mkBubble(id,w+' (legend)');b.style.marginLeft='8px';sp.appendChild(b);});
 }
 // Notes: the short notes about the chosen camera, digital camera and lens collect behind one amber "!" icon beside each control name (they are still written to the hidden paragraphs, which this reads)
-const NOTE_GROUPS={camera:{label:'label[for="n_camera"]',what:'the technical camera',ids:['lens-acc','lens-acc2','lens-panel']},lens:{label:'label[for="n_lens"]',what:'the lens',ids:['lens-restr','lens-design','est-note']},dig:{label:'label[for="n_sensor"]',what:'the digital camera',ids:['dig-note']},combTilt:{label:'label[for="n_tilt"]',what:'combined tilt',fn:()=>COMBT.tilt},combRf:{label:'label[for="n_shift"]',what:'rise/fall or shift',fn:()=>topView?bodyShiftNote():COMBT.rf},combRf2:{label:'label[for="n_shiftb"]',what:'rise/fall or shift',fn:()=>topView?COMBT.rf:bodyShiftNote()}};
+const NOTE_GROUPS={camera:{label:'label[for="n_camera"]',what:'the technical camera',ids:['lens-acc','lens-acc2','lens-panel']},lens:{label:'label[for="n_lens"]',what:'the lens',ids:['lens-restr','lens-design','est-note']},dig:{label:'label[for="n_sensor"]',what:'the digital camera',ids:['dig-note']},combTilt:{label:'label[for="n_tilt"]',what:'tilt or swing',fn:()=>[COMBT.tilt,circTiltNote()].filter(Boolean).join('\n\n')},combRf:{label:'label[for="n_shift"]',what:'rise/fall or shift',fn:()=>[topView?bodyShiftNote():COMBT.rf,CLAMPN.a].filter(Boolean).join('\n\n')},combRf2:{label:'label[for="n_shiftb"]',what:'rise/fall or shift',fn:()=>[topView?COMBT.rf:bodyShiftNote(),CLAMPN.b].filter(Boolean).join('\n\n')}};
 var COMBT={tilt:'',rf:''}; // notes for movements that combine the front and rear standards, shown beside Tilt and Rise/Fall
 var NOTES_ON=false;
 function notesRefresh(){
@@ -2228,6 +2260,7 @@ function notesRefresh(){
   if(!t.length&&tipFor===b)hideTip();else if(tipFor===b&&t.length)tipEl.textContent=g.text;}
 }
 NOTES_ON=true;notesRefresh();
+[['n_shift','a'],['r_shift','a'],['n_shiftb','b'],['r_shiftb','b']].forEach(([id,w])=>{const e=document.getElementById(id);if(e)e.addEventListener('input',()=>{if(CLAMPN[w]){CLAMPN[w]='';notesRefresh();}});}); // the note about a movement reduced by a focus change goes once the movement is set again
 const START_TEXT='Choose a technical camera, a digital camera and a lens. The tool only permits combinations of these three components that work together.';
 function startBubble(){ // an information bubble next to Camera setup until a technical camera, a digital camera and a lens (or Custom) are all chosen
  const sm=document.querySelector('#camsetup>summary');if(!sm)return;let b=sm.querySelector('.startb');
