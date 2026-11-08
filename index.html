@@ -24,7 +24,17 @@ body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 "Atkinson Hype
 .legtog .chev{display:inline-block;width:1em;font-size:15px}
 @media(max-width:880px){.legtog{display:flex}.panel.legoff .legend,.panel.legoff .readoutw{display:none}}
 .row#cam-row{display:none}
-body:not(.tech) #camsetup{margin:0}body:not(.tech) #camsetup>summary{display:none}body.tech #lens-note{display:none!important}body.tech .row#cam-row{display:grid}
+body:not(.tech) #camsetup{margin:0}
+body.tech #camsetup{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+.adjsec{margin:0 0 10px}.adjsec>summary{font-weight:700} /* Adjustments: styled like the Setup and Additional controls headings */
+body.tech aside details.addl:not(.setup){border-top:1px solid var(--line);padding-top:12px;margin-top:4px} /* a line above Additional controls, like the one above the adjustments */
+html.simple body.tech #camsetup,html.simple body.tech aside details.addl:not(.setup),html.simple body.tech #shotpane,html.simple body.tech .panel.objs,html.simple body.tech .rightcol{display:none!important} /* phones, simplified by a long press on Adjustments */
+body.tech.pending #adjsec>summary,body.tech.pending aside details.addl:not(.setup)>summary{color:var(--muted);cursor:not-allowed} /* folded and locked until the Setup is complete */
+#shotpane .shotrow{margin:0}#shotpane{margin-bottom:16px}html.phone-land #shotpane{margin-bottom:8px}
+@media(max-width:880px){#shotpane{margin-bottom:0}}
+@media(max-width:880px){.wrap #shotpane{order:2}} /* a line between the Camera setup and the adjustments that follow (Rob de Loe, 2026-11-08) */
+#or-label{display:none} /* no Camera orientation heading: the Landscape / Portrait toggle explains itself */
+#orient-row{display:flex;align-items:center;gap:8px}#orient-row #or-group{flex:1}body:not(.tech) #camsetup>summary{display:none}body.tech #lens-note{display:none!important}body.tech .row#cam-row{display:grid}
 .row#shiftb-row{display:none}body.tech .row#shiftb-row{display:grid}
 .row#orient-row{display:none}body.tech .row#orient-row{display:grid}body:not(.learner) #main-controls>.row#orient-row{order:8}
 #or-group{grid-column:1/3;margin:2px 0 0}
@@ -71,7 +81,8 @@ body.help .readout{padding-right:34px}
 #tip{position:fixed;z-index:50;max-width:min(320px,calc(100vw - 24px));max-height:60vh;overflow:auto;background:var(--panel);color:var(--fg);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #tip[hidden]{display:none}
 h1{font:600 22px/1.2 "Atkinson Hyperlegible","Segoe UI",sans-serif;margin:0 0 4px}
-.devnote{font:300 13px/1.4 "Atkinson Hyperlegible","Segoe UI",sans-serif;color:var(--fg);margin:0 0 12px;max-width:62em}
+.devnote{display:none} /* the Created by line is shown at the top of the (i) beside the title (Rob de Loe, 2026-11-08) */
+.hdr{margin-bottom:12px}
 .sub{color:var(--muted);margin:12px 0 0;max-width:70ch}
 .panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
 canvas{width:100%;display:block;border-radius:6px}
@@ -87,6 +98,53 @@ canvas{width:100%;display:block;border-radius:6px}
 .autobtns .btn{margin:0}
 .lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px;align-items:start}
 @media(max-width:700px){.lower{grid-template-columns:minmax(0,1fr)}}
+/* Phones held sideways (Rob de Loe, 2026-11-08): html.phone-land is set by the script when the screen is landscape, at most 500 px tall and touch-only
+   (or when the page is opened with ?phone, for the preview page). The diagram and everything under it fill the left side, the controls the right; each side scrolls on its own */
+html.phone-land,html.phone-land body{height:100%;overflow:hidden}
+html.phone-land .wrap{max-width:none;height:100vh;height:100dvh;box-sizing:border-box;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:8px;padding:6px max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px))}
+html.phone-land .wrap main{display:block;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:10px;scrollbar-gutter:stable} /* room for the scroll bar, clear of Help */
+html.phone-land #scene{margin:0 auto}
+body.tech .row input[type=number],body.tech .row input[type=text]{box-sizing:border-box} /* the number boxes stay inside their 84 px column instead of running past the panel's edge */
+html.phone-land .wrap aside{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+html.phone-land .wrap .lower{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:8px}
+html.phone-land .wrap .lower>div,html.phone-land .wrap .rightcol{display:block}
+html.phone-land .hdr{flex-wrap:nowrap;align-items:center;gap:8px}
+html.phone-land .hdr h1{flex:1 1 auto;min-width:0;margin:0;font-size:15px;display:flex;align-items:center;flex-wrap:nowrap;column-gap:6px}
+html.phone-land .hdr h1 .ib{width:22px;height:22px;min-width:22px;margin-left:0!important;font-size:11px}
+html.phone-land .helpbtn{font-size:12px;padding:3px 9px}
+html.phone-land .devnote{display:none}
+html.phone-land .hdr{margin-bottom:6px}
+html.phone-land .panel{padding:8px}
+html.phone-land .xpop{position:fixed;top:max(8px,env(safe-area-inset-top,0px));bottom:auto;max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));box-sizing:border-box;right:max(8px,env(safe-area-inset-right,0px));left:auto;width:min(440px,62vw);min-width:0;margin:0;overflow-y:auto;overscroll-behavior:contain;z-index:60} /* the camera and lens menus open as a tall panel over the right side, which scrolls; a tap on the diagram side closes it */
+html.phone-land .xpop li>ul{position:static;margin:2px 0 2px 14px;box-shadow:none;border:0;border-left:2px solid var(--line);border-radius:0;padding:0 0 0 2px}
+html.phone-land .xpop .mi{white-space:normal}
+.xpop>.xclose{display:none}
+@media(max-width:600px){.xpop>.xclose{display:flex}}
+html.phone-land .xpop>.xclose{display:flex}
+.xpop>.xclose{position:sticky;top:0;margin:0 0 -34px auto;z-index:2;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--fg);font-size:15px;line-height:1;cursor:pointer}
+.xpop>.xclose:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.viewsw.vw-above{margin:0 0 8px}
+.legrow{display:contents}
+body.tech .legrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 0}
+body.tech .legrow .legtog{width:auto;margin:0;padding:6px 10px;font-size:13px;font-weight:600;border-radius:6px}
+body.tech .legrow .legtog .chev{display:none}
+body.tech .legrow .bw{margin:0}
+body.tech .legrow .btn{margin:0;padding:6px 10px;font-size:13px}
+body.tech .legrow .legtog{min-height:0;line-height:1.45}
+/* Phones (Rob de Loe, 2026-11-08): a compact header on one row: the title with its (i) at the left, Help at the right, and the byline in small type underneath */
+@media(max-width:600px){
+ .wrap{padding-top:10px}
+ .hdr{flex-wrap:nowrap;align-items:center;gap:8px}
+ .hdr h1{flex:1 1 auto;min-width:0;margin:0;font-size:clamp(14px,4.2vw,19px);line-height:1.2;display:flex;align-items:center;flex-wrap:nowrap;column-gap:6px}
+ .hdr h1 .ib{width:24px;height:24px;min-width:24px;margin-left:0!important;font-size:12px}
+ .hdrbtns{flex:0 0 auto}
+ .helpbtn{font-size:12px;padding:4px 10px}
+ .devnote{display:none} /* on phones the Created by line is shown at the top of the (i) beside the title */
+ html .xpop{position:fixed;top:max(8px,env(safe-area-inset-top,0px));bottom:auto;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));width:auto;min-width:0;margin:0;max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;z-index:60} /* the camera and lens menus float over the page, as when the phone is held sideways */
+ .hdr{margin-bottom:0}
+ .wrap{row-gap:10px} /* portrait phones: less space between the header, the view switch and the panels */
+ .bw:has(>.viewsw.vw-above){margin:0}.viewsw.vw-above{margin:0}
+}
 .row{display:grid;grid-template-columns:1fr 84px;gap:2px 8px;margin-bottom:10px}
 .row label{font-weight:600}
 #scene{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -174,7 +232,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.337</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.353</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -219,7 +277,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
    <p class="note" id="lens-note" style="display:none;margin:-6px 0 14px">With a lens chosen, tilt moves in 0.25° steps and shift in 0.5 mm steps, and distances and angles are rounded. Real lenses are set on coarse scales, and their true focal length and angle of view vary by a few percent.</p>
    </details>
    <div id="main-controls"></div>
-   <div class="shotrow"><button type="button" id="reset" class="btn">Reset to Default</button><button type="button" id="shot-btn" class="btn" aria-haspopup="true" aria-expanded="false">Screenshot</button>
+   <div class="shotrow"><button type="button" id="reset" class="btn">Reset to Default</button><button type="button" id="reset-adj" class="btn">Reset Adjustments</button><button type="button" id="shot-btn" class="btn" aria-haspopup="true" aria-expanded="false">Screenshot</button>
    <button type="button" id="link-btn" class="btn">Save link</button>
    <span id="shot-menu" class="shotmenu" hidden role="group" aria-label="Screenshot format"><button type="button" class="btn" data-f="jpg">JPEG</button><button type="button" class="btn" data-f="pdf">PDF</button><button type="button" class="btn" data-f="clip" id="clip-btn">Copy to clipboard</button></span></div>
    <details class="addl"><summary>Additional controls</summary>
@@ -612,7 +670,7 @@ document.getElementById('n_curv').addEventListener('change',e=>{curvLvl=+e.targe
 document.getElementById('hyper-btn').addEventListener('click',()=>{setFocusDist(hyperM());draw();});
 // imperial users get round-number defaults of their own: camera height 70 in, scene width 80 ft, focus distance 15 ft
 const IMP_DEF={h:70*2.54,view:100/FT},IMP_FOCUS_M=7/FT;
-const defVal=(k,imp)=>imp&&IMP_DEF[k]!==undefined?IMP_DEF[k]:DEF[k];
+const defVal=(k,imp)=>(k==='view'&&TECH&&isPhone())?(imp?33/FT:10):imp&&IMP_DEF[k]!==undefined?IMP_DEF[k]:DEF[k]; // phones start with a 10 m (33 ft) scene width, so the raised camera is visible; computers 30 m (100 ft) (Rob de Loe, 2026-11-08)
 const defFocusM=imp=>imp?IMP_FOCUS_M:DEFAULT_FOCUS_M;
 // ---- lens picker: a lens fixes the focal length, aperture range, closest focus, image circle, maximum tilt and maximum shift
 const TLENSES={ // Technical Camera mode lenses, loaded from technical-lenses.xlsx (Lenses and Lens x Camera sheets). mfr, fmt: the manufacturer and format (Digital, Analog or Custom) that group the Lens drop-down. cams: the technical cameras the lens fits (OK or Restricted on the sheet; Unknown and No are left out). The camera, not the lens, sets tilt, rise/fall and shift; shift and tilt of 50 mm and 20 deg here only apply before a camera is chosen. nos: for a lens that fits a technical camera with only some of its digital cameras, the sensor kinds (mirrorless, back1, back2) it does not fit, per camera id. panel: for a camera whose tilt and swing come from a special lens panel (the Cambo WRS-1600), the panel for this lens: its name, tilt and swing each way, and shortest focus distance dmin (m), per camera id. tiltb: built-in tilt/swing of the lens (not used yet)
@@ -1081,6 +1139,7 @@ function buildLensMenu(keys){
   h+='</ul></li>';}
  pop.innerHTML=h+'</ul>';
 }
+function menuInline(){return innerWidth<=640||document.documentElement.classList.contains('phone-land');} // sub-menus open in place under their heading (phones and narrow windows), not beside it
 function initCascade(ids,selId,key){ // a cascading menu: hover or click opens a sub-menu beside the item; arrow keys, Enter and Escape work too (used for Lens and Digital camera)
  const btn=document.getElementById(ids[0]),pop=document.getElementById(ids[1]),box=document.getElementById(ids[2]);
  const closeAll=()=>{pop.hidden=true;btn.setAttribute('aria-expanded','false');pop.querySelectorAll('li.open').forEach(l=>{l.classList.remove('open');const b=l.querySelector(':scope>button');if(b)b.setAttribute('aria-expanded','false');});};
@@ -1088,16 +1147,17 @@ function initCascade(ids,selId,key){ // a cascading menu: hover or click opens a
   li.parentNode.querySelectorAll(':scope>li.open').forEach(o=>{if(o!==li){o.classList.remove('open');o.querySelectorAll('li.open').forEach(x=>x.classList.remove('open'));const b=o.querySelector(':scope>button');if(b)b.setAttribute('aria-expanded','false');}});
   const u=li.querySelector(':scope>ul');
   if(u){li.classList.add('open');li.querySelector(':scope>button').setAttribute('aria-expanded','true');
-   if(innerWidth>640){u.style.top='-5px';const r=u.getBoundingClientRect();if(r.bottom>innerHeight-8)u.style.top=Math.max(-li.getBoundingClientRect().top+8,-5-(r.bottom-innerHeight+8))+'px';}}}; // keep a tall sub-menu on screen
+   if(!menuInline()){u.style.top='-5px';const r=u.getBoundingClientRect();if(r.bottom>innerHeight-8)u.style.top=Math.max(-li.getBoundingClientRect().top+8,-5-(r.bottom-innerHeight+8))+'px';}}}; // keep a tall sub-menu on screen
  const openMenu=()=>{pop.hidden=false;btn.setAttribute('aria-expanded','true');
+  if(isPhone()&&!pop.querySelector(':scope>.xclose')){const x=document.createElement('button');x.type='button';x.className='xclose';x.setAttribute('aria-label','Close the menu');x.textContent='✕';x.addEventListener('click',e=>{e.stopPropagation();closeAll();btn.focus();});pop.insertBefore(x,pop.firstChild);} // phones: the menu floats over the page, so it gets its own close button
   pop.classList.toggle('flip',box.getBoundingClientRect().left+box.offsetWidth+170+380>innerWidth&&box.getBoundingClientRect().left>560); // flyouts go to the left when there is no room on the right
   const c=pop.querySelector('[aria-current=true]');if(c)for(let li=c.closest('li');li;li=li.parentNode.closest('li'))openLi(li);
   (c||pop.querySelector('.mi')).focus();};
  btn.addEventListener('click',()=>{if(pop.hidden)openMenu();else closeAll();});
- pop.addEventListener('mouseover',e=>{const li=e.target.closest('li');if(li&&innerWidth>640)openLi(li);});
+ pop.addEventListener('mouseover',e=>{const li=e.target.closest('li');if(li&&!menuInline())openLi(li);});
  pop.addEventListener('click',e=>{const b=e.target.closest('.mi');if(!b)return;
   if(b.dataset[key]!==undefined){const sel=document.getElementById(selId);closeAll();btn.focus();sel.value=b.dataset[key];sel.dispatchEvent(new Event('change'));return;}
-  const li=b.closest('li');if(li.classList.contains('open')&&innerWidth<=640){li.classList.remove('open');b.setAttribute('aria-expanded','false');}else openLi(li);});
+  const li=b.closest('li');if(li.classList.contains('open')&&menuInline()){li.classList.remove('open');b.setAttribute('aria-expanded','false');}else openLi(li);});
  pop.addEventListener('keydown',e=>{const b=document.activeElement.closest('.mi');if(!b)return;const li=b.closest('li'),items=[...li.parentNode.querySelectorAll(':scope>li>.mi')],i=items.indexOf(b);
   const go=n=>{if(n){e.preventDefault();n.focus();}};
   if(e.key==='ArrowDown')go(items[(i+1)%items.length]);else if(e.key==='ArrowUp')go(items[(i-1+items.length)%items.length]);
@@ -1282,7 +1342,8 @@ function resetAll(keepEquip){CLAMPN.a=CLAMPN.b=''; // everything back to its def
  for(const k in DEF)if(k!=='focus'&&k!=='coc')setVal(k,defVal(k,imperial));
  if(keep){if(keep.lens!=='custom')setLens(keep.lens);else setVal('fl',keep.fl);}
  focusAnchor=null;tiltAnchor=null;
- if(TECH){if(!keepEquip){LENSCUSTOM=false;TCAM=null;DIG=null;DMOD=null;DIGAUTO=false;CAMAUTO=false;if(window.setOrient)setOrient(false);}equipSync();} // Technical Camera mode: Reset to Default clears the Technical camera and Digital camera choices; a change of view keeps them
+ if(TECH){if(!keepEquip){LENSCUSTOM=false;TCAM=null;DIG=null;DMOD=null;DIGAUTO=false;CAMAUTO=false;if(window.setOrient)setOrient(false);}equipSync();}
+ if(TECH&&!keepEquip){for(const d of [document.getElementById('adjsec'),document.querySelector('aside details.addl:not(.setup)')])if(d)d.open=false;document.documentElement.classList.remove('simple');if(window.adjTitle)adjTitle();} // Reset All and first opening: Adjustments and Additional controls folded (they open once the Setup is complete) // Technical Camera mode: Reset to Default clears the Technical camera and Digital camera choices; a change of view keeps them
  if(keep&&keep.cm==='custom'){document.getElementById('n_coc').value=keep.cv;setCocMode('custom');}else setCocMode(keep?keep.cm:'sharp');
  if(LEARN)setLens('c50'); // the defaults above would undo the lens's own sensor and focal length
  curvLvl=0;curved=false;document.getElementById('n_curv').value='0';updateAuto();
@@ -1290,22 +1351,16 @@ function resetAll(keepEquip){CLAMPN.a=CLAMPN.b=''; // everything back to its def
  TOP=[];SIDE=learnObjs();syncObjs();
  setFocusDist(defFocusM(imperial));
 }
-function resetSettings(){ // Technical Camera mode, Shift-click on Reset to Default: only the exposure and movement settings go back; lens, camera, digital camera, scene and the rest stay
+function resetSettings(){ // Technical Camera mode, Reset Adjustments (and a change of view): only aperture, focus distance, tilt/swing, rise/fall, shift and camera pitch go back; the Camera setup (including camera height and orientation), scene and the rest stay (Rob de Loe, 2026-11-08)
  setVal('ap',LENS?LENS.ap[0]:defVal('ap',imperial)); // with a lens chosen, its widest aperture is the starting point
- for(const k of['tilt','shift','shiftb','h','cam'])setVal(k,defVal(k,imperial));
+ for(const k of['tilt','shift','shiftb','cam'])setVal(k,defVal(k,imperial));
  focusAnchor=null;tiltAnchor=null;
  setFocusDist(Math.max(defFocusM(imperial),DMIN||0));updateAuto();
 }
-(()=>{ // Technical Camera mode on a touch screen: pressing and holding Reset to Default (about half a second) does the same partial reset as Shift-click
- const b=document.getElementById('reset');let tm=null,fired=false;
- b.style.webkitTouchCallout='none';b.style.webkitUserSelect='none';b.style.userSelect='none';
- const stop=()=>{if(tm){clearTimeout(tm);tm=null;}};
- b.addEventListener('pointerdown',e=>{fired=false;stop();if(!TECH||e.pointerType==='mouse')return;tm=setTimeout(()=>{tm=null;fired=true;resetSettings();draw();if(navigator.vibrate)try{navigator.vibrate(30);}catch(_){}},500);});
- ['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,stop));
- b.addEventListener('contextmenu',e=>{if(TECH&&(fired||tm))e.preventDefault();});
- b.addEventListener('click',e=>{if(fired){fired=false;return;} // the long press has already done its reset
-  if(TECH&&e.shiftKey){resetSettings();draw();return;}resetAll();draw();setHelp(false);});
-})(); // Reset to Default also turns the Help bubbles off
+{ // Reset All: every setting back to its default (and the Help bubbles off); Reset Adjustments (Technical Camera mode): only the adjustments (Rob de Loe, 2026-11-08; the Shift-click and long press are gone)
+ document.getElementById('reset').addEventListener('click',()=>{resetAll();draw();setHelp(false);});
+ document.getElementById('reset-adj').addEventListener('click',()=>{resetSettings();draw();});
+}
 applySensor(DEF.sensor);setCocMode('sharp');
 setFocusDist(DEFAULT_FOCUS_M);setLens('custom');
 
@@ -1652,7 +1707,15 @@ let hideHandles=false; // true while drawing the screenshot, which leaves out th
 const sc=document.getElementById('scene'),SX0=sc.getContext('2d');let sx=SX0;
 const NOP=new Proxy(function(){},{get:(t,k)=>k===Symbol.toPrimitive?()=>0:k==='measureText'?()=>({width:0}):NOP,set:()=>true,apply:()=>NOP}); // a drawing context that draws nothing: used while the view shows only the camera
 const off=document.createElement('canvas');
-function draw(){sx=SX0;try{return draw0();}finally{sx=SX0;try{startBubble();lockControls();combNote();}catch(_){}}}
+function draw(){sx=SX0;try{return draw0();}finally{sx=SX0;try{startBubble();lockControls();combNote();}catch(_){}try{fitScene();}catch(_){}}}
+// phone held sideways: the diagram is narrowed (and centred) so that it, the readout under it and the Show legend / reset buttons all fit on the screen without scrolling (Rob de Loe, 2026-11-08)
+function fitScene(){if(fitScene.busy)return;const pl=document.documentElement.classList.contains('phone-land');
+ if(!pl){if(sc.style.width){sc.style.width='';fitScene.busy=true;try{draw();}finally{fitScene.busy=false;}}return;}
+ const m=document.querySelector('.wrap main'),row=document.querySelector('.legrow'),pan=sc.parentNode;if(!m||!row)return;
+ const st=m.scrollTop,mb=m.getBoundingClientRect().bottom,rb=row.getBoundingClientRect().bottom+st,ch=sc.getBoundingClientRect().height,cw=sc.getBoundingClientRect().width;if(!(ch>0&&cw>0))return;
+ const full=pan.clientWidth-parseFloat(getComputedStyle(pan).paddingLeft)-parseFloat(getComputedStyle(pan).paddingRight);
+ const over=rb+8-mb,want=Math.max(220,Math.min(full,(ch-over)*cw/ch));
+ if(Math.abs(want-cw)>2){sc.style.width=Math.round(want)+'px';fitScene.busy=true;try{draw();}finally{fitScene.busy=false;}}}
 function draw0(){
  TA=[];PENDING=[];
  if(LENS&&LENS.circAp&&CIRCAUTO!==null&&Math.abs(V.circ-CIRCAUTO)<1e-9){const c=circAt(LENS,V.ap);if(c!==CIRCAUTO){CIRCAUTO=c;setVal('circ',c);}} // the image circle follows the aperture
@@ -2293,9 +2356,23 @@ sc.addEventListener('touchmove',e=>{if(drag)e.preventDefault();},{passive:false}
 const endDrag=()=>{drag=null;focusSide=0;sc.style.cursor='default';};
 sc.addEventListener('pointerup',endDrag);sc.addEventListener('pointercancel',endDrag);
 if(typeof window!=='undefined')window.addEventListener('resize',draw);
+// phone held sideways: the layout switches to diagram left, controls right (see html.phone-land in the styles); ?phone in the address forces the check without a touch screen (preview page)
+if(typeof window!=='undefined'&&window.matchMedia){const PLQ=matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)'),PLF=/[?&]phone\b/.test(location.search);
+ const applyPL=first=>{const on=PLQ.matches||(PLF&&innerWidth>innerHeight&&innerHeight<=500);if(document.documentElement.classList.contains('phone-land')!==on){document.documentElement.classList.toggle('phone-land',on);if(first!==true)draw();}};
+ (PLQ.addEventListener?PLQ.addEventListener('change',()=>applyPL()):PLQ.addListener(()=>applyPL()));addEventListener('resize',()=>applyPL());applyPL(true);}
+if(TECH&&isPhone())setVal('view',defVal('view',imperial)); // phones: the starting scene width (a saved link restores its own later)
+// phones: isPhone() is true in the portrait phone layout (600 px wide or less) and when held sideways (html.phone-land)
+function isPhone(){return (window.matchMedia&&matchMedia('(max-width: 600px)').matches)||document.documentElement.classList.contains('phone-land');}
+// portrait phones: the switch between the two views sits above the diagram; elsewhere (computers, phones held sideways) it stays at the top of the controls (Rob de Loe, 2026-11-08)
+const VW_SW=document.querySelector('.viewsw'),VW_HOME=VW_SW?VW_SW.parentNode:null,VW_NEXT=VW_SW?VW_SW.nextElementSibling:null;
+function placeViewSw(){if(!VW_SW)return;const up=window.matchMedia&&matchMedia('(max-width: 600px)').matches&&!document.documentElement.classList.contains('phone-land');
+ const scenePanel=document.getElementById('scene').closest('.panel');
+ if(up&&VW_SW.nextElementSibling!==scenePanel){scenePanel.parentNode.insertBefore(VW_SW,scenePanel);VW_SW.classList.add('vw-above');}
+ else if(!up&&VW_SW.parentNode!==VW_HOME){VW_HOME.insertBefore(VW_SW,VW_NEXT);VW_SW.classList.remove('vw-above');}}
+addEventListener('resize',placeViewSw);placeViewSw();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
 function refreshLabels(){
- for(const [id,a,b] of[['vw-side','Tilt Up/Down','Tilt and Rise/Fall'],['vw-top','Tilt Left/Right','Swing and Shift']]){const e=document.getElementById(id);if(e)e.textContent=TECH?b:a;}
+ for(const [id,a,b] of[['vw-side','Tilt Up/Down','Tilt and Rise/Fall'],['vw-top','Tilt Left/Right','Swing and Shift']]){const e=document.getElementById(id);if(e)e.textContent=TECH?b:a;}{const r=document.getElementById('reset'),ra=document.getElementById('reset-adj');if(r)r.textContent=TECH?'Reset All':'Reset to Default';if(ra){const w=ra.closest('.bw')||ra;w.style.display=TECH?'':'none';}}if(window.placeResets)placeResets();
  {const ln=document.getElementById('lens-note');if(ln){if(!ln.dataset.o)ln.dataset.o=ln.textContent;ln.textContent=tv(ln.dataset.o);}}
  const L={tilt:TECH?(topView?'Swing (°)':'Tilt (°)'):'Lens tilt (°)',shift:TECH?(topView?'Shift (mm)':'Rise/Fall (mm)'):'Lens shift (mm)',shiftb:topView?'Rise/Fall (mm)':'Shift (mm)',lens:TECH?'Lens':'Choose example lens',cam:topView?'Pan camera (°)':'Camera pitch (°)',h:'Camera height from ground ('+(imperial?'in':'cm')+')',view:(topView?'Scene depth shown (':'Scene width shown (')+(imperial?'ft':'m')+')',focus:'Focus distance ('+(imperial?'ft':'m')+')'};
  for(const k in L){const l=document.querySelector(`label[for="n_${k}"]`),r=document.getElementById('r_'+k);if(l)l.firstChild.nodeValue=L[k];if(r)r.setAttribute('aria-label',L[k]);}
@@ -2314,7 +2391,7 @@ function updateAuto(){ // Auto Tilt/Focus assumes a flat field and works only in
  const ab=document.getElementById('auto-btn');ab.disabled=topView;ab.title=topView?'Not available in the Tilt Left/Right view':'';
 }
 function setView(top){
- if(top!==topView)resetAll(true); // changing view starts again from the defaults, just as Reset to Default does
+ if(top!==topView){if(TECH)resetSettings();else resetAll(true);} // Technical Camera mode: changing view does Reset Adjustments and changes nothing else (Rob de Loe, 2026-11-08); the other modes start again from the defaults
  topView=top;focusAnchor=null;tiltAnchor=null;
  if(TECH&&TCAM)camLimits();
  for(const [id,on] of[['vw-side',!top],['vw-top',top]]){const b=document.getElementById(id);b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');}
@@ -2339,12 +2416,49 @@ function placeSensorRow(){ // Technical Camera mode: the sensor choice (renamed 
 const FL_MARK=(()=>{const row=document.getElementById('n_fl').closest('.row'),m=document.createComment('focal length row home');row.parentNode.insertBefore(m,row);return m;})();
 function placeSetup(){ // Technical Camera mode: Technical camera, Digital camera, Lens and Focal length sit together under the Camera setup sub-heading, which can be folded away
  const d=document.getElementById('camsetup'),fr=document.getElementById('n_fl').closest('.row');
- if(TECH)d.appendChild(fr);else FL_MARK.parentNode.insertBefore(fr,FL_MARK.nextSibling);
+ const hr=document.getElementById('n_h').closest('.row'),orr=document.getElementById('orient-row');
+ if(!placeSetup.homes){placeSetup.homes=[hr,orr].map(e=>{if(!e)return null;const m=document.createComment('home of '+(e.id||'camera height row'));e.parentNode.insertBefore(m,e);return m;});}
+ if(TECH){d.appendChild(fr);if(hr)d.appendChild(hr);if(orr)d.appendChild(orr);} // Camera height from ground and Camera orientation are camera setup settings too, under Focal length (Rob de Loe, 2026-11-08)
+ else{FL_MARK.parentNode.insertBefore(fr,FL_MARK.nextSibling);[hr,orr].forEach((e,k)=>{const m=placeSetup.homes[k];if(e&&m)m.parentNode.insertBefore(e,m.nextSibling);});}
  d.open=true;
 }
-function placeUnits(){ // Learner mode shows the units switch last among the controls; Advanced mode keeps it first in Additional controls
+// Technical Camera mode (Rob de Loe, 2026-11-08): the Camera setup heading reads Setup; the adjustments (aperture, focus distance, tilt/swing, rise/fall, shift, camera pitch)
+// sit under their own Adjustments heading; Screenshot and Save link get their own pane above Add objects. The other modes keep their layout.
+// Phones (portrait and sideways), Technical Camera mode: a long press on the Adjustments heading simplifies the page to the diagram and the adjustments, hiding Setup,
+// Additional controls and the panes for Screenshot / Save link, Add objects and Auto; another long press brings them back (Rob de Loe, 2026-11-08)
+function adjTitle(){const d=document.getElementById('adjsec');if(!d)return;const sm=d.querySelector('summary'),simple=document.documentElement.classList.contains('simple');
+ if(!isPhone()&&simple)document.documentElement.classList.remove('simple');
+ sm.textContent=isPhone()?(document.documentElement.classList.contains('simple')?'Adjustments (Long press for all menus)':'Adjustments (Long press to simplify)'):'Adjustments';}
+function wireSimplify(sm){let tm=null,fired=false;sm.style.webkitTouchCallout='none';sm.style.userSelect='none';sm.style.webkitUserSelect='none';
+ sm.addEventListener('pointerdown',e=>{fired=false;if(!isPhone()||!setupDone())return;tm=setTimeout(()=>{tm=null;fired=true;document.documentElement.classList.toggle('simple');const ad=document.getElementById('adjsec');if(ad)ad.open=true;adjTitle();if(navigator.vibrate)try{navigator.vibrate(30);}catch(_){}draw();},500);});
+ ['pointerup','pointercancel','pointerleave'].forEach(t=>sm.addEventListener(t,()=>{if(tm){clearTimeout(tm);tm=null;}}));
+ sm.addEventListener('contextmenu',e=>{if(fired||tm)e.preventDefault();});
+ sm.addEventListener('click',e=>{if(fired){fired=false;e.preventDefault();}}); // the long press does not also fold the section
+ addEventListener('resize',adjTitle);}
+function placeTechSections(){
+ const cs=document.getElementById('camsetup'),sm=cs&&cs.querySelector('summary');
+ if(sm){const t=[...sm.childNodes].find(n=>n.nodeType===3);if(t)t.nodeValue=TECH?'Setup':'Camera setup';}
+ const mc=document.getElementById('main-controls');
+ if(!placeTechSections.adj){const d=document.createElement('details');d.className='adjsec';d.id='adjsec';d.open=true;d.innerHTML='<summary>Adjustments</summary>';placeTechSections.adj=d;
+  const pane=document.createElement('div');pane.className='panel';pane.id='shotpane';pane.innerHTML='<div class="shotrow" id="shotrow2"></div>';placeTechSections.pane=pane;}
+ if(!placeTechSections.lp){placeTechSections.lp=true;wireSimplify(placeTechSections.adj.querySelector('summary'));}
+ if(!placeTechSections.guard){placeTechSections.guard=true; // Adjustments and Additional controls stay folded until the Setup is complete (Rob de Loe, 2026-11-08)
+  for(const d of [placeTechSections.adj,document.querySelector('aside details.addl:not(.setup)')]){if(!d)continue;
+   d.querySelector('summary').addEventListener('click',e=>{if(TECH&&!setupDone()){e.preventDefault();}});
+   d.addEventListener('toggle',()=>{if(d.open&&TECH&&!setupDone())d.open=false;});}}
+ const adj=placeTechSections.adj,pane=placeTechSections.pane,row2=pane.firstChild,objs=document.querySelector('.panel.objs');
+ const sb=document.getElementById('shot-btn'),lb=document.getElementById('link-btn'),menu=document.getElementById('shot-menu'),w=e=>e.closest('.bw')||e,home=document.querySelector('aside .shotrow');
+ if(TECH){if(!adj.contains(mc)){mc.parentNode.insertBefore(adj,mc);adj.appendChild(mc);}
+  if(objs&&pane.parentNode!==objs.parentNode)objs.parentNode.insertBefore(pane,objs);
+  [w(sb),w(lb),menu].forEach(e=>row2.appendChild(e));adjTitle();}
+ else{if(adj.parentNode){adj.parentNode.insertBefore(mc,adj);adj.remove();}
+  if(home)[w(sb),w(lb),menu].forEach(e=>home.appendChild(e));if(pane.parentNode)pane.remove();document.documentElement.classList.remove('simple');}
+}
+function placeUnits(){ // Learner mode shows the units switch last among the controls; Advanced mode keeps it first in Additional controls; Technical Camera mode puts it in Setup, under the Landscape / Portrait toggle (Rob de Loe, 2026-11-08)
  const uw=document.querySelector('.unitsw').parentNode;
- if(LEARN)document.getElementById('main-controls').appendChild(uw);else{const ac=document.getElementById('adv-controls');ac.insertBefore(uw,ac.firstChild);}
+ if(TECH){const orr=document.getElementById('orient-row');if(orr&&orr.parentNode)orr.after(uw);}
+ else if(LEARN)document.getElementById('main-controls').appendChild(uw);else{const ac=document.getElementById('adv-controls');ac.insertBefore(uw,ac.firstChild);}
+ placeTechSections();
 }
 
 // Technical Camera vocabulary: the Advanced tool with view-camera words. In the side view the front standard is tilted and raised or lowered (tilt, rise/fall);
@@ -2373,7 +2487,7 @@ function setMode(m){
 {const lt=document.getElementById('leg-tog'),pn=document.getElementById('leg-body').parentNode; // phones and narrow screens: the legend (and, in Advanced mode, the details) can be folded away
  pn.classList.add('legoff');
  const upd=()=>{const off=pn.classList.contains('legoff');lt.setAttribute('aria-expanded',off?'false':'true');lt.querySelector('.chev').textContent=off?'▸':'▾';
-  document.getElementById('leg-tog-txt').textContent=(off?'Show ':'Hide ')+(LEARN?'legend':'legend and details');};
+  document.getElementById('leg-tog-txt').textContent=(off?'Show ':'Hide ')+(LEARN||TECH?'legend':'legend and details');};
  lt.addEventListener('click',()=>{pn.classList.toggle('legoff');upd();});
  window.updLegTog=upd;upd();}
 // ---- Help: information bubbles, shown only while Help is on; tap (or hover with a mouse) a bubble to read its note
@@ -2412,7 +2526,8 @@ const TIPS={
  coc:"The largest blur spot on the sensor that still counts as acceptably sharp, in mm. It sets the teal limits of acceptable sharpness: a smaller value is stricter and makes the sharp zone narrower. Sharp and Soft are scaled to the digital camera's sensor by its diagonal, so each setting means the same degree of sharpness in a print of the same size: for a full frame sensor Sharp is 0.011 mm and Soft is 0.021 mm, and a larger sensor gets proportionally larger values. The values are shown in the list. Pixel level (2 \u00d7 pitch) is extremely conservative. This option appears when the chosen digital camera has a known pixel pitch. Because it is stricter than Sharp on the finest-pitch cameras, the sharp zone is roughly half as thick. Custom lets you enter your own value in mm, which is not scaled.",
  curv:'Real lenses do not focus on a perfectly flat plane. With field curvature simulated, the surface of best focus bends toward the camera away from the lens axis, so the sharp zone becomes a shallow curve instead of a straight line. Choose None, Mild or Strong. With Strong, at the edge of the lens\'s image circle the best focus is about 4% nearer than at the centre; Mild is half of that. These amounts are exaggerated so that the effect is easy to see. The curve is a rough simulation that does not represent the actual field of focus of any particular lens. The faint dashed lines show where the plane of focus and the limits of sharpness would be with a flat field. The red and green handles stay on those straight lines.',
  fovchk:'The teal shading that represents the area in sharp focus normally extends to the edge of the lens\'s image circle. Check this box to limit it to the field of view.',
- reset:'Resets all settings to their defaults. Use Shift-click (or a long press on a phone) to not reset the Camera setup (technical camera, digital camera, lens and focal length), the camera orientation, the circle of confusion, the scene size, the ground, field curvature, the diffraction and field-of-view check boxes, or the background objects.',
+ reset:'Resets every setting to its default, including the Camera setup.',
+ resetadj:'Resets only the adjustments: aperture, focus distance, tilt (or swing), rise/fall, shift and camera pitch. Switching between the two views does the same.',
  plane:()=>"The plane of focus is the flat surface where everything is rendered as sharp as the lens can make it. Here it is seen "+(T()?"from above":"edge-on")+", as the red line. The line is solid where the lens forms an image, inside its image circle, and dashed beyond that. Points in front of or behind it are blurred more and more the farther they are from it. The focus distance moves the plane nearer or farther, and "+(T()?"swing":"tilt")+" turns it about the hinge line. With field curvature on, this straight line is only a faint reference; the solid curve is the surface of best focus. The red + sign shows the focus distance \u2013 the point where the plane of focus crosses the camera axis.",
  limits:"The teal lines mark the limits of acceptable sharpness, and they reflect defocus blur only. The shading between them reflects defocus blur and, when that option is chosen under Additional controls, diffraction as well (see Sharpness shading in the legend). The lines are solid where the lens forms an image, inside its image circle, and dashed beyond that. Anything between the teal lines counts as acceptably sharp. That means a point is blurred by no more than the circle of confusion, the largest blur spot on the sensor that still looks like a sharp point at normal viewing size. The tool finds the limits by working out, with a thin-lens model, where the blur grows to that size in front of and behind the plane of focus. A wider aperture or a longer lens narrows the zone, and a larger circle of confusion widens it. With tilt or swing, the zone is a wedge that is narrowest at the hinge. With field curvature on, these straight lines are only faint references; the solid teal curves are the limits.",
  hinge:()=>"The hinge line is the line the plane of focus pivots around as the focus distance changes. It lies at the focal length divided by the sine of the "+(T()?"swing":"tilt")+" angle from the lens, in the plane through the lens parallel to the sensor, so more "+(T()?"swing":"tilt")+" brings it closer. The green dot marks the hinge and the dashed green line joins it to the lens. It is not shown when "+(T()?"swing":"tilt")+" is 0. The hinge belongs to the flat-field plane, so with field curvature on it describes the faint straight reference lines.",
@@ -2427,7 +2542,7 @@ const LTIPS={};
 const tipEl=document.getElementById('tip');
 function hideTip(){tipEl.hidden=true;tipFor=null;tipPinned=false;}
 function showTip(b){
- const t=(LEARN&&LTIPS[b.dataset.tip])||TIPS[b.dataset.tip];{const tx=typeof t==='function'?t():t;tipEl.textContent=tx;}tipEl.hidden=false;tipFor=b;
+ const t=(LEARN&&LTIPS[b.dataset.tip])||TIPS[b.dataset.tip];{let tx=typeof t==='function'?t():t;if(b.dataset.tip==='about'){const dn=document.querySelector('.devnote');if(dn)tx=dn.textContent.trim()+'\n\n'+tx;}tipEl.textContent=tx;} /* the Created by line is shown at the top of the (i) beside the title (phones and computers) */tipEl.hidden=false;tipFor=b;
  const r=b.getBoundingClientRect(),w=tipEl.offsetWidth,h=tipEl.offsetHeight,vw=document.documentElement.clientWidth,vh=innerHeight;
  let x=Math.min(Math.max(12,r.left+r.width/2-w/2),vw-w-12),y=r.bottom+8;if(y+h>vh-8)y=Math.max(8,r.top-h-8);
  tipEl.style.left=x+'px';tipEl.style.top=y+'px';
@@ -2439,12 +2554,20 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
  {const h=document.querySelector('.hdr h1'),b=mkBubble('about','this tool');b.classList.add('always');b.style.marginLeft='10px';h.appendChild(b);} // always shown, whether or not Help is on
  const lab=(sel,id,what)=>{const l=document.querySelector(sel);if(l)addBubble(l,id,what);else console.warn('no label',sel);};
  lab('label[for="n_fl"]','fl','focal length');lab('label[for="r_ap"]','ap','aperture');lab('label[for="n_h"]','h','camera height');
- lab('label[for="n_cam"]','cam_c','camera pitch or pan');lab('#or-label','orient','the camera orientation');lab('label[for="n_tilt"]','tilt_c','lens tilt');lab('label[for="n_focus"]','focus_c','focus distance');
+ lab('label[for="n_cam"]','cam_c','camera pitch or pan');lab('#or-label','orient','the camera orientation');{const ob=document.querySelector('#or-label .ib'),og=document.getElementById('or-group');if(ob&&og)og.after(ob);} /* the Camera orientation heading is gone (the toggle explains itself); its help bubble sits beside the toggle */lab('label[for="n_tilt"]','tilt_c','lens tilt');lab('label[for="n_focus"]','focus_c','focus distance');
  lab('label[for="n_shift"]','shift_c','lens shift');lab('label[for="n_shiftb"]','shiftb','the second shift');lab('label[for="n_view"]','view_c','scene size');
  lab('label[for="n_camera"]','camera','technical camera');lab('label[for="n_lens"]','lens','lens limits');lab('label[for="n_ground"]','ground','ground surface');lab('label[for="n_sensor"]','sensor','sensor format');lab('label[for="n_circ"]','circ','image circle diameter');lab('label[for="n_cocmode"]','coc','circle of confusion');lab('label.fovrow','fovchk','the field of view check box');lab('#coarse-row','coarse','coarse movements');lab('#diff-row','diff','diffraction and defocus blur');lab('label[for="n_curv"]','curv','field curvature');
  wrapWith(document.querySelector('.viewsw:not(.unitsw)'),'view','the view switch');wrapWith(document.querySelector('.unitsw'),'units','the units switch');
  wrapWith(document.getElementById('auto-btn'),'auto','Auto Tilt/Focus',true);wrapWith(document.getElementById('hyper-btn'),'hyperbtn','focus at hyperfocal distance',true);
- wrapWith(document.getElementById('reset'),'reset','Reset to Default',true);wrapWith(document.getElementById('shot-btn'),'shot','Screenshot',true);wrapWith(document.getElementById('link-btn'),'link','Save link',true);
+ wrapWith(document.getElementById('reset'),'reset','Reset All',true);wrapWith(document.getElementById('reset-adj'),'resetadj','Reset Adjustments',true);
+// Technical Camera mode, where the legend can be folded away (phones and narrow windows): Show legend / Hide legend is a small button, with Reset All and Reset Adjustments beside it (Rob de Loe, 2026-11-08)
+{const lt=document.getElementById('leg-tog'),row=document.createElement('div');row.className='legrow';lt.parentNode.insertBefore(row,lt);row.appendChild(lt);
+ const wr=['reset','reset-adj'].map(id=>{const b=document.getElementById(id);return b.closest('.bw')||b;}),home=wr[0].parentNode,next=wr[1].nextSibling;
+ window.placeResets=()=>{const there=TECH&&getComputedStyle(lt).display!=='none';
+  if(there&&wr[0].parentNode!==row){wr.forEach(w=>row.appendChild(w));}
+  else if(!there&&wr[0].parentNode===row){wr.forEach(w=>home.insertBefore(w,next));}
+  document.getElementById('reset-adj').textContent=there?'Reset Adj':'Reset Adjustments';}; // beside Show legend there is no room for the full name in portrait, so phones use the short name in both orientations
+ addEventListener('resize',placeResets);placeResets();}wrapWith(document.getElementById('shot-btn'),'shot','Screenshot',true);wrapWith(document.getElementById('link-btn'),'link','Save link',true);
  addBubble(document.querySelector('.panel.objs h2'),'objs','background objects');
  {const o=document.getElementById('out'),w=document.createElement('div');w.className='readoutw';w.style.position='relative';o.parentNode.insertBefore(w,o);w.appendChild(o);const b=mkBubble('readout','the results');b.style.cssText='position:absolute;right:0;top:12px;margin:0';w.appendChild(b);}
  const ov=document.getElementById('sceneTips');
@@ -2476,7 +2599,7 @@ function notesRefresh(){
 }
 NOTES_ON=true;notesRefresh();
 [['n_shift','a'],['r_shift','a'],['n_shiftb','b'],['r_shiftb','b']].forEach(([id,w])=>{const e=document.getElementById(id);if(e)e.addEventListener('input',()=>{if(CLAMPN[w]){CLAMPN[w]='';notesRefresh();}});}); // the note about a movement reduced by a focus change goes once the movement is set again
-const START_TEXT='Choose a technical camera, a digital camera and a lens. The tool only permits combinations of these three components that work together.';
+const START_TEXT='Choose a technical camera, a digital camera and a lens. The tool only permits combinations of these three components that work together. Then choose whether you are shooting in portrait or landscape, and how high the camera is off the ground.';
 function startBubble(){ // a Start arrow (information bubble) next to Camera setup until a technical camera, a digital camera and a lens (or Custom) are all chosen
  const sm=document.querySelector('#camsetup>summary');if(!sm)return;let b=sm.querySelector('.startb');
  const need=!!TECH&&!(TCAM&&DIG!==null&&(LENS||LENSCUSTOM));
@@ -2494,10 +2617,10 @@ function combNote(){ // a camera whose front and rear standards can be combined:
  notesRefresh();}
 const setupDone=()=>!TECH||!!(TCAM&&DIG!==null&&(LENS||LENSCUSTOM));
 let LOCKWAS=null;
-function lockControls(){ // until the camera setup is complete every control outside it is locked (Help, Reset, Screenshot and Save link stay available)
- const lock=TECH&&!setupDone();if(!lock&&LOCKWAS===false)return;LOCKWAS=lock; // nothing to undo once unlocked: skip the walk over every control on each frame
+function lockControls(){ // until the camera setup is complete every control outside it is locked (Help, Reset All, Reset Adjustments, Screenshot, Save link and the switch between the two views stay available)
+ const lock=TECH&&!setupDone();document.body.classList.toggle('pending',lock);if(!lock&&LOCKWAS===false)return;LOCKWAS=lock; // nothing to undo once unlocked: skip the walk over every control on each frame
  document.querySelectorAll('main input,main select,main button,aside input,aside select,aside button').forEach(e=>{
-  if((e.closest('#camsetup')&&!e.closest('.row:has(#n_fl)'))||e.classList.contains('ib')||e.closest('.shotrow')||e.id==='help-btn'||e.id==='leg-tog')return;
+  if((e.closest('#camsetup')&&!e.closest('.row:has(#n_fl)'))||e.classList.contains('ib')||e.closest('.shotrow')||e.id==='help-btn'||e.id==='leg-tog'||e.id==='reset'||e.id==='reset-adj'||e.id==='vw-side'||e.id==='vw-top'){if(e.dataset.lk){e.disabled=false;delete e.dataset.lk;}return;}
   if(lock){if(!e.disabled){e.disabled=true;e.dataset.lk='1';}}
   else if(e.dataset.lk){e.disabled=!!e.closest('.row.locked');delete e.dataset.lk;}});}
 startBubble();
@@ -2534,7 +2657,7 @@ function placeSceneTips(){
   rx=Math.min(view.W-14,Math.max(14,rx+(a.dx||0)));ry=Math.min(view.H-14,Math.max(14,ry+(a.dy||0)));
   b.style.display='';b.style.left=(sc.offsetLeft+rx*k)+'px';b.style.top=(sc.offsetTop+ry*k)+'px';});
 }
-function setHelp(on){helpOn=on;document.body.classList.toggle('help',on);const hb=document.getElementById('help-btn');hb.setAttribute('aria-pressed',on?'true':'false');if(!on)hideTip();placeSceneTips();}
+function setHelp(on){helpOn=on;document.body.classList.toggle('help',on);if(window.placeResets)setTimeout(placeResets,0);const hb=document.getElementById('help-btn');hb.setAttribute('aria-pressed',on?'true':'false');if(!on)hideTip();placeSceneTips();}
 document.getElementById('help-btn').addEventListener('click',()=>setHelp(!helpOn));
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.ib');
  if(b){e.preventDefault();e.stopPropagation();if(tipFor===b&&tipPinned){hideTip();}else{showTip(b);tipPinned=true;}return;}
