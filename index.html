@@ -110,7 +110,9 @@ html.phone-land .wrap .lower{display:grid;grid-template-columns:minmax(0,1fr);ga
 html.phone-land .wrap .lower>div,html.phone-land .wrap .rightcol{display:block}
 html.phone-land .hdr{flex-wrap:nowrap;align-items:center;gap:8px}
 html.phone-land .hdr h1{flex:1 1 auto;min-width:0;margin:0;font-size:15px;display:flex;align-items:center;flex-wrap:nowrap;column-gap:6px}
-html.phone-land .hdr h1 .ib{width:22px;height:22px;min-width:22px;margin-left:0!important;font-size:11px}
+html.phone-land .hdr h1 .ib{width:22px;height:22px;min-width:22px;max-width:22px;min-height:22px;max-height:22px;flex:0 0 22px;align-self:center;box-sizing:border-box;aspect-ratio:1;padding:0;line-height:1;overflow:hidden;margin-left:0!important;font-size:11px}
+html{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%}
+body.help .hdr h1 .ib{flex-shrink:0}
 html.phone-land .helpbtn{font-size:12px;padding:3px 9px}
 html.phone-land .hdrbtns{display:flex;gap:6px}
 html.phone-land .devnote{display:none}
@@ -233,7 +235,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.354</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.356</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -2363,10 +2365,16 @@ if(typeof window!=='undefined'&&window.matchMedia){const PLQ=matchMedia('(orient
  (PLQ.addEventListener?PLQ.addEventListener('change',()=>applyPL()):PLQ.addListener(()=>applyPL()));addEventListener('resize',()=>applyPL());applyPL(true);}
 if(TECH&&isPhone())setVal('view',defVal('view',imperial)); // phones: the starting scene width (a saved link restores its own later)
 // phone held sideways: a Full screen button hides the browser's address bar, which otherwise takes a large share of the short screen (Rob de Loe, 2026-11-08)
-{const fb=document.getElementById('fs-btn'),de=document.documentElement,can=!!(de.requestFullscreen||de.webkitRequestFullscreen),isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+{const fb=document.getElementById('fs-btn'),de=document.documentElement,can=!!(de.requestFullscreen||de.webkitRequestFullscreen||de.mozRequestFullScreen),isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement);
  const upd=()=>{fb.hidden=!(can&&TECH&&de.classList.contains('phone-land'));fb.textContent=isFs()?'Exit full screen':'Full screen';};
- fb.addEventListener('click',()=>{try{if(isFs())(document.exitFullscreen||document.webkitExitFullscreen).call(document);else{const r=(de.requestFullscreen||de.webkitRequestFullscreen).call(de,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}}catch(_){} });
- document.addEventListener('fullscreenchange',()=>{upd();draw();});document.addEventListener('webkitfullscreenchange',()=>{upd();draw();});addEventListener('resize',upd);upd();}
+ fb.addEventListener('click',()=>{ // tried in turn, because browsers differ (Firefox on Android may refuse the options or the root element): no options, then the page body, then the older prefixed calls
+  if(isFs()){try{(document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);}catch(_){}return;}
+  const tries=[()=>de.requestFullscreen&&de.requestFullscreen(),()=>document.body.requestFullscreen&&document.body.requestFullscreen(),()=>de.webkitRequestFullscreen&&de.webkitRequestFullscreen(),()=>de.mozRequestFullScreen&&de.mozRequestFullScreen()];
+  const fail=()=>{fb.textContent='Full screen not allowed';setTimeout(upd,2500);};
+  const go=i=>{if(i>=tries.length){fail();return;}let r;try{r=tries[i]();}catch(_){go(i+1);return;}
+   if(r&&typeof r.then==='function')r.then(()=>{},()=>go(i+1));else setTimeout(()=>{if(!isFs())go(i+1);},300);};
+  go(0);});
+ document.addEventListener('fullscreenchange',()=>{upd();draw();});document.addEventListener('webkitfullscreenchange',()=>{upd();draw();});document.addEventListener('mozfullscreenchange',()=>{upd();draw();});addEventListener('resize',upd);upd();}
 // phones: isPhone() is true in the portrait phone layout (600 px wide or less) and when held sideways (html.phone-land)
 function isPhone(){return (window.matchMedia&&matchMedia('(max-width: 600px)').matches)||document.documentElement.classList.contains('phone-land');}
 // portrait phones: the switch between the two views sits above the diagram; elsewhere (computers, phones held sideways) it stays at the top of the controls (Rob de Loe, 2026-11-08)
@@ -2626,7 +2634,7 @@ let LOCKWAS=null;
 function lockControls(){ // until the camera setup is complete every control outside it is locked (Help, Reset All, Reset Adjustments, Screenshot, Save link and the switch between the two views stay available)
  const lock=TECH&&!setupDone();document.body.classList.toggle('pending',lock);if(!lock&&LOCKWAS===false)return;LOCKWAS=lock; // nothing to undo once unlocked: skip the walk over every control on each frame
  document.querySelectorAll('main input,main select,main button,aside input,aside select,aside button').forEach(e=>{
-  if((e.closest('#camsetup')&&!e.closest('.row:has(#n_fl)'))||e.classList.contains('ib')||e.closest('.shotrow')||e.id==='help-btn'||e.id==='leg-tog'||e.id==='reset'||e.id==='reset-adj'||e.id==='vw-side'||e.id==='vw-top'){if(e.dataset.lk){e.disabled=false;delete e.dataset.lk;}return;}
+  if((e.closest('#camsetup')&&!e.closest('.row:has(#n_fl)'))||e.classList.contains('ib')||e.closest('.shotrow')||e.id==='help-btn'||e.id==='fs-btn'||e.id==='leg-tog'||e.id==='reset'||e.id==='reset-adj'||e.id==='vw-side'||e.id==='vw-top'){if(e.dataset.lk){e.disabled=false;delete e.dataset.lk;}return;}
   if(lock){if(!e.disabled){e.disabled=true;e.dataset.lk='1';}}
   else if(e.dataset.lk){e.disabled=!!e.closest('.row.locked');delete e.dataset.lk;}});}
 startBubble();
