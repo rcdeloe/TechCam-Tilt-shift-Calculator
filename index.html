@@ -77,6 +77,8 @@ body.help .readout{padding-right:34px}
 #sceneTips{position:absolute;left:0;top:0;width:0;height:0}
 #sceneTips .ib{position:absolute;transform:translate(-50%,-50%);margin:0}
 .bw{display:flex;align-items:center;gap:8px}.bw>:first-child{flex:1}
+.bw>.ib:first-child{flex:none}
+#fs-btn[hidden]{display:none!important}
 .bw.inl{display:inline-flex}.bw.inl>:first-child{flex:none}
 #tip{position:fixed;z-index:50;max-width:min(320px,calc(100vw - 24px));max-height:60vh;overflow:auto;background:var(--panel);color:var(--fg);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #tip[hidden]{display:none}
@@ -235,7 +237,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.356</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.357</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -2366,7 +2368,7 @@ if(typeof window!=='undefined'&&window.matchMedia){const PLQ=matchMedia('(orient
 if(TECH&&isPhone())setVal('view',defVal('view',imperial)); // phones: the starting scene width (a saved link restores its own later)
 // phone held sideways: a Full screen button hides the browser's address bar, which otherwise takes a large share of the short screen (Rob de Loe, 2026-11-08)
 {const fb=document.getElementById('fs-btn'),de=document.documentElement,can=!!(de.requestFullscreen||de.webkitRequestFullscreen||de.mozRequestFullScreen),isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement);
- const upd=()=>{fb.hidden=!(can&&TECH&&de.classList.contains('phone-land'));fb.textContent=isFs()?'Exit full screen':'Full screen';};
+ const upd=()=>{const fs=isFs(),port=!de.classList.contains('phone-land');fb.hidden=!(can&&TECH&&(!port||fs));fb.textContent=fs?(port?'Exit':'Exit full screen'):'Full screen';fb.title=fs?'Leave full screen':'Use the whole screen (hides the browser bar)';}; /* offered when the phone is sideways; once in full screen it stays (as Exit) after turning the phone upright, so there is always a way out (Rob de Loe, 2026-11-08) */
  fb.addEventListener('click',()=>{ // tried in turn, because browsers differ (Firefox on Android may refuse the options or the root element): no options, then the page body, then the older prefixed calls
   if(isFs()){try{(document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);}catch(_){}return;}
   const tries=[()=>de.requestFullscreen&&de.requestFullscreen(),()=>document.body.requestFullscreen&&document.body.requestFullscreen(),()=>de.webkitRequestFullscreen&&de.webkitRequestFullscreen(),()=>de.mozRequestFullScreen&&de.mozRequestFullScreen()];
@@ -2374,15 +2376,15 @@ if(TECH&&isPhone())setVal('view',defVal('view',imperial)); // phones: the starti
   const go=i=>{if(i>=tries.length){fail();return;}let r;try{r=tries[i]();}catch(_){go(i+1);return;}
    if(r&&typeof r.then==='function')r.then(()=>{},()=>go(i+1));else setTimeout(()=>{if(!isFs())go(i+1);},300);};
   go(0);});
- document.addEventListener('fullscreenchange',()=>{upd();draw();});document.addEventListener('webkitfullscreenchange',()=>{upd();draw();});document.addEventListener('mozfullscreenchange',()=>{upd();draw();});addEventListener('resize',upd);upd();}
+ document.addEventListener('fullscreenchange',()=>{upd();draw();});document.addEventListener('webkitfullscreenchange',()=>{upd();draw();});document.addEventListener('mozfullscreenchange',()=>{upd();draw();});addEventListener('resize',upd);new MutationObserver(upd).observe(de,{attributes:true,attributeFilter:['class']});upd();} /* the class watch: turning the phone can change html.phone-land after the resize event */
 // phones: isPhone() is true in the portrait phone layout (600 px wide or less) and when held sideways (html.phone-land)
 function isPhone(){return (window.matchMedia&&matchMedia('(max-width: 600px)').matches)||document.documentElement.classList.contains('phone-land');}
 // portrait phones: the switch between the two views sits above the diagram; elsewhere (computers, phones held sideways) it stays at the top of the controls (Rob de Loe, 2026-11-08)
 const VW_SW=document.querySelector('.viewsw'),VW_HOME=VW_SW?VW_SW.parentNode:null,VW_NEXT=VW_SW?VW_SW.nextElementSibling:null;
 function placeViewSw(){if(!VW_SW)return;const up=window.matchMedia&&matchMedia('(max-width: 600px)').matches&&!document.documentElement.classList.contains('phone-land');
- const scenePanel=document.getElementById('scene').closest('.panel');
- if(up&&VW_SW.nextElementSibling!==scenePanel){scenePanel.parentNode.insertBefore(VW_SW,scenePanel);VW_SW.classList.add('vw-above');}
- else if(!up&&VW_SW.parentNode!==VW_HOME){VW_HOME.insertBefore(VW_SW,VW_NEXT);VW_SW.classList.remove('vw-above');}}
+ const scenePanel=document.getElementById('scene').closest('.panel'),it=VW_SW.parentNode.classList.contains('bw')?VW_SW.parentNode:VW_SW; /* move the switch together with its help bubble wrapper; moving the switch alone left the bubble behind, stretched into a long oval (Rob de Loe, 2026-11-08) */
+ if(up&&it.nextElementSibling!==scenePanel){scenePanel.parentNode.insertBefore(it,scenePanel);VW_SW.classList.add('vw-above');}
+ else if(!up&&it.parentNode!==VW_HOME){VW_HOME.insertBefore(it,VW_NEXT&&VW_NEXT.parentNode===VW_HOME?VW_NEXT:null);VW_SW.classList.remove('vw-above');}}
 addEventListener('resize',placeViewSw);placeViewSw();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
 function refreshLabels(){
