@@ -112,6 +112,7 @@ html.phone-land .hdr{flex-wrap:nowrap;align-items:center;gap:8px}
 html.phone-land .hdr h1{flex:1 1 auto;min-width:0;margin:0;font-size:15px;display:flex;align-items:center;flex-wrap:nowrap;column-gap:6px}
 html.phone-land .hdr h1 .ib{width:22px;height:22px;min-width:22px;margin-left:0!important;font-size:11px}
 html.phone-land .helpbtn{font-size:12px;padding:3px 9px}
+html.phone-land .hdrbtns{display:flex;gap:6px}
 html.phone-land .devnote{display:none}
 html.phone-land .hdr{margin-bottom:6px}
 html.phone-land .panel{padding:8px}
@@ -231,8 +232,8 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <body>
 <div class="wrap">
  <main>
-  <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.353</p>
+  <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.354</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -1726,7 +1727,7 @@ function draw0(){
  const CV=curved; // field curvature on: the focus surface and the limits are curves, drawn inside the field of view
  // the canvas is sized to its on-screen width so text and handles stay a usable size on phones; drawing is in CSS pixels
  const dpr=forceDpr||Math.min(3,(typeof devicePixelRatio==='number'&&devicePixelRatio)||1),rc=sc.getBoundingClientRect();
- const RW=Math.max(300,Math.round(rc.width)||960),RHt=Math.round(RW*0.675);
+ const RW=Math.max(TECH?200:300,Math.round(rc.width)||960),RHt=Math.round(RW*0.675);
  // in the top view the scene is laid out as if it were the side view (distance along the width, left/right along the height) and then turned a quarter turn
  // anticlockwise, so the camera ends up at the bottom; W and H below are the dimensions of that unturned layout
  const W=topView?RHt:RW;
@@ -2361,6 +2362,11 @@ if(typeof window!=='undefined'&&window.matchMedia){const PLQ=matchMedia('(orient
  const applyPL=first=>{const on=PLQ.matches||(PLF&&innerWidth>innerHeight&&innerHeight<=500);if(document.documentElement.classList.contains('phone-land')!==on){document.documentElement.classList.toggle('phone-land',on);if(first!==true)draw();}};
  (PLQ.addEventListener?PLQ.addEventListener('change',()=>applyPL()):PLQ.addListener(()=>applyPL()));addEventListener('resize',()=>applyPL());applyPL(true);}
 if(TECH&&isPhone())setVal('view',defVal('view',imperial)); // phones: the starting scene width (a saved link restores its own later)
+// phone held sideways: a Full screen button hides the browser's address bar, which otherwise takes a large share of the short screen (Rob de Loe, 2026-11-08)
+{const fb=document.getElementById('fs-btn'),de=document.documentElement,can=!!(de.requestFullscreen||de.webkitRequestFullscreen),isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+ const upd=()=>{fb.hidden=!(can&&TECH&&de.classList.contains('phone-land'));fb.textContent=isFs()?'Exit full screen':'Full screen';};
+ fb.addEventListener('click',()=>{try{if(isFs())(document.exitFullscreen||document.webkitExitFullscreen).call(document);else{const r=(de.requestFullscreen||de.webkitRequestFullscreen).call(de,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}}catch(_){} });
+ document.addEventListener('fullscreenchange',()=>{upd();draw();});document.addEventListener('webkitfullscreenchange',()=>{upd();draw();});addEventListener('resize',upd);upd();}
 // phones: isPhone() is true in the portrait phone layout (600 px wide or less) and when held sideways (html.phone-land)
 function isPhone(){return (window.matchMedia&&matchMedia('(max-width: 600px)').matches)||document.documentElement.classList.contains('phone-land');}
 // portrait phones: the switch between the two views sits above the diagram; elsewhere (computers, phones held sideways) it stays at the top of the controls (Rob de Loe, 2026-11-08)
