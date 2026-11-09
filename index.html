@@ -78,6 +78,23 @@ body.help .readout{padding-right:34px}
 #sceneTips .ib{position:absolute;transform:translate(-50%,-50%);margin:0}
 .bw{display:flex;align-items:center;gap:8px}.bw>:first-child{flex:1}
 .bw>.ib:first-child{flex:none}
+/* Computers, Technical Camera mode (Rob de Loe, 2026-11-08): changes carried over from the phone layout.
+   The diagram column stays in view while the page scrolls the controls; the Screenshot, Add objects and Auto panes sit under the controls;
+   the legend can be folded away with Show legend / Hide legend, with Reset All and Reset Adjustments beside it; Simplify / Show all hides Setup and the other panes */
+body.tech .legtog{display:flex}
+body.tech .panel.legoff .legend,body.tech .panel.legoff .readoutw{display:none}
+@media(min-width:881px){html:not(.phone-land) body.tech .wrap main{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain}}
+.lower.lo-right{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
+.lower.lo-right>div,.lower.lo-right .rightcol{display:block}
+.lower.lo-right>div>.panel+.panel{margin-top:16px}
+#adjsec>summary .simpbtn{margin-left:10px;padding:2px 10px;font:600 12px/1.4 inherit;font-family:inherit;color:var(--accent);background:var(--ctl);border:1px solid var(--accent);border-radius:6px;cursor:pointer;vertical-align:1px}
+#adjsec>summary .simpbtn:hover,#adjsec>summary .simpbtn:focus-visible{background:var(--accent);color:var(--panel);outline:none}
+body.pending #adjsec>summary .simpbtn{display:none}
+.savegrp{display:inline-flex;gap:8px;flex-wrap:wrap}
+body:not(.tech) .bw:has(>#savegrp),body:not(.tech) #savegrp{display:none!important}
+#toast{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;max-width:calc(100vw - 32px);box-sizing:border-box;padding:8px 14px;border-radius:8px;background:var(--fg);color:var(--panel);font-size:13px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.on{opacity:1}
+@media(pointer:coarse){#adjsec>summary .simpbtn{padding:4px 12px;font-size:13px;min-height:30px}} /* an easier tap on phones */
 #fs-btn[hidden]{display:none!important}
 .bw.inl{display:inline-flex}.bw.inl>:first-child{flex:none}
 #tip{position:fixed;z-index:50;max-width:min(320px,calc(100vw - 24px));max-height:60vh;overflow:auto;background:var(--panel);color:var(--fg);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25)}
@@ -237,7 +254,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.357</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.362</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -283,7 +300,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
    </details>
    <div id="main-controls"></div>
    <div class="shotrow"><button type="button" id="reset" class="btn">Reset to Default</button><button type="button" id="reset-adj" class="btn">Reset Adjustments</button><button type="button" id="shot-btn" class="btn" aria-haspopup="true" aria-expanded="false">Screenshot</button>
-   <button type="button" id="link-btn" class="btn">Save link</button>
+   <button type="button" id="link-btn" class="btn">Save link</button><span class="savegrp" id="savegrp"><button type="button" id="save-btn" class="btn">Save state</button><button type="button" id="forget-btn" class="btn">Forget saved state</button></span>
    <span id="shot-menu" class="shotmenu" hidden role="group" aria-label="Screenshot format"><button type="button" class="btn" data-f="jpg">JPEG</button><button type="button" class="btn" data-f="pdf">PDF</button><button type="button" class="btn" data-f="clip" id="clip-btn">Copy to clipboard</button></span></div>
    <details class="addl"><summary>Additional controls</summary>
    <div id="adv-controls"></div>
@@ -2363,7 +2380,7 @@ sc.addEventListener('pointerup',endDrag);sc.addEventListener('pointercancel',end
 if(typeof window!=='undefined')window.addEventListener('resize',draw);
 // phone held sideways: the layout switches to diagram left, controls right (see html.phone-land in the styles); ?phone in the address forces the check without a touch screen (preview page)
 if(typeof window!=='undefined'&&window.matchMedia){const PLQ=matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)'),PLF=/[?&]phone\b/.test(location.search);
- const applyPL=first=>{const on=PLQ.matches||(PLF&&innerWidth>innerHeight&&innerHeight<=500);if(document.documentElement.classList.contains('phone-land')!==on){document.documentElement.classList.toggle('phone-land',on);if(first!==true)draw();}};
+ const applyPL=first=>{const on=PLQ.matches||(PLF&&innerWidth>innerHeight&&innerHeight<=500);if(document.documentElement.classList.contains('phone-land')!==on){document.documentElement.classList.toggle('phone-land',on);if(window.placeLower)placeLower();if(first!==true)draw();}};
  (PLQ.addEventListener?PLQ.addEventListener('change',()=>applyPL()):PLQ.addListener(()=>applyPL()));addEventListener('resize',()=>applyPL());applyPL(true);}
 if(TECH&&isPhone())setVal('view',defVal('view',imperial)); // phones: the starting scene width (a saved link restores its own later)
 // phone held sideways: a Full screen button hides the browser's address bar, which otherwise takes a large share of the short screen (Rob de Loe, 2026-11-08)
@@ -2443,8 +2460,12 @@ function placeSetup(){ // Technical Camera mode: Technical camera, Digital camer
 // Phones (portrait and sideways), Technical Camera mode: a long press on the Adjustments heading simplifies the page to the diagram and the adjustments, hiding Setup,
 // Additional controls and the panes for Screenshot / Save link, Add objects and Auto; another long press brings them back (Rob de Loe, 2026-11-08)
 function adjTitle(){const d=document.getElementById('adjsec');if(!d)return;const sm=d.querySelector('summary'),simple=document.documentElement.classList.contains('simple');
- if(!isPhone()&&simple)document.documentElement.classList.remove('simple');
- sm.textContent=isPhone()?(document.documentElement.classList.contains('simple')?'Adjustments (Long press for all menus)':'Adjustments (Long press to simplify)'):'Adjustments';}
+ sm.textContent='Adjustments';
+ if(TECH){ /* a Simplify / Show all button beside the heading, on phones and computers alike; it replaced the phones' long press (Rob de Loe, 2026-11-08) */
+  const b=document.createElement('button');b.type='button';b.className='simpbtn';b.textContent=simple?'Show all':'Simplify';
+  b.title=simple?'Show Setup, Additional controls and the other panes again':'Hide everything except the diagram and the adjustments';
+  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(!setupDone())return;document.documentElement.classList.toggle('simple');d.open=true;adjTitle();draw();});
+  sm.appendChild(b);}}
 function wireSimplify(sm){let tm=null,fired=false;sm.style.webkitTouchCallout='none';sm.style.userSelect='none';sm.style.webkitUserSelect='none';
  sm.addEventListener('pointerdown',e=>{fired=false;if(!isPhone()||!setupDone())return;tm=setTimeout(()=>{tm=null;fired=true;document.documentElement.classList.toggle('simple');const ad=document.getElementById('adjsec');if(ad)ad.open=true;adjTitle();if(navigator.vibrate)try{navigator.vibrate(30);}catch(_){}draw();},500);});
  ['pointerup','pointercancel','pointerleave'].forEach(t=>sm.addEventListener(t,()=>{if(tm){clearTimeout(tm);tm=null;}}));
@@ -2457,19 +2478,28 @@ function placeTechSections(){
  const mc=document.getElementById('main-controls');
  if(!placeTechSections.adj){const d=document.createElement('details');d.className='adjsec';d.id='adjsec';d.open=true;d.innerHTML='<summary>Adjustments</summary>';placeTechSections.adj=d;
   const pane=document.createElement('div');pane.className='panel';pane.id='shotpane';pane.innerHTML='<div class="shotrow" id="shotrow2"></div>';placeTechSections.pane=pane;}
- if(!placeTechSections.lp){placeTechSections.lp=true;wireSimplify(placeTechSections.adj.querySelector('summary'));}
+ if(!placeTechSections.lp){placeTechSections.lp=true;addEventListener('resize',adjTitle);} /* the long press (wireSimplify) is no longer used: the Simplify / Show all button does its job */
  if(!placeTechSections.guard){placeTechSections.guard=true; // Adjustments and Additional controls stay folded until the Setup is complete (Rob de Loe, 2026-11-08)
   for(const d of [placeTechSections.adj,document.querySelector('aside details.addl:not(.setup)')]){if(!d)continue;
    d.querySelector('summary').addEventListener('click',e=>{if(TECH&&!setupDone()){e.preventDefault();}});
    d.addEventListener('toggle',()=>{if(d.open&&TECH&&!setupDone())d.open=false;});}}
  const adj=placeTechSections.adj,pane=placeTechSections.pane,row2=pane.firstChild,objs=document.querySelector('.panel.objs');
- const sb=document.getElementById('shot-btn'),lb=document.getElementById('link-btn'),menu=document.getElementById('shot-menu'),w=e=>e.closest('.bw')||e,home=document.querySelector('aside .shotrow');
+ const sb=document.getElementById('shot-btn'),lb=document.getElementById('link-btn'),sg=document.getElementById('savegrp'),menu=document.getElementById('shot-menu'),w=e=>e.closest('.bw')||e,home=document.querySelector('aside .shotrow');
  if(TECH){if(!adj.contains(mc)){mc.parentNode.insertBefore(adj,mc);adj.appendChild(mc);}
   if(objs&&pane.parentNode!==objs.parentNode)objs.parentNode.insertBefore(pane,objs);
-  [w(sb),w(lb),menu].forEach(e=>row2.appendChild(e));adjTitle();}
+  [w(sb),w(lb),w(sg),menu].forEach(e=>row2.appendChild(e));adjTitle();}
  else{if(adj.parentNode){adj.parentNode.insertBefore(mc,adj);adj.remove();}
-  if(home)[w(sb),w(lb),menu].forEach(e=>home.appendChild(e));if(pane.parentNode)pane.remove();document.documentElement.classList.remove('simple');}
+  if(home)[w(sb),w(lb),w(sg),menu].forEach(e=>home.appendChild(e));if(pane.parentNode)pane.remove();document.documentElement.classList.remove('simple');}
+ placeLower();
 }
+function placeLower(){ /* phone held sideways, Technical Camera mode: the screenshot, objects and Auto panes go on the right, under the main controls; elsewhere they stay under the diagram (Rob de Loe, 2026-11-08) */
+ const lo=document.querySelector('.lower'),as=document.querySelector('.wrap aside');if(!lo||!as)return;
+ if(!placeLower.home){placeLower.home=lo.parentNode;placeLower.next=lo.nextElementSibling;}
+ const right=TECH&&(document.documentElement.classList.contains('phone-land')||innerWidth>880); /* phones held sideways and computers (two columns) */
+ if(right&&lo.parentNode!==as)as.appendChild(lo);
+ else if(!right&&lo.parentNode!==placeLower.home)placeLower.home.insertBefore(lo,placeLower.next&&placeLower.next.parentNode===placeLower.home?placeLower.next:null);
+ lo.classList.toggle('lo-right',right);}
+addEventListener('resize',()=>placeLower());
 function placeUnits(){ // Learner mode shows the units switch last among the controls; Advanced mode keeps it first in Additional controls; Technical Camera mode puts it in Setup, under the Landscape / Portrait toggle (Rob de Loe, 2026-11-08)
  const uw=document.querySelector('.unitsw').parentNode;
  if(TECH){const orr=document.getElementById('orient-row');if(orr&&orr.parentNode)orr.after(uw);}
@@ -2501,7 +2531,7 @@ function setMode(m){
  resetAll();draw();
 }
 {const lt=document.getElementById('leg-tog'),pn=document.getElementById('leg-body').parentNode; // phones and narrow screens: the legend (and, in Advanced mode, the details) can be folded away
- pn.classList.add('legoff');
+ pn.classList.add('legoff');if(TECH&&innerWidth>880&&!document.documentElement.classList.contains('phone-land'))pn.classList.remove('legoff'); // phones and narrow windows start with the legend folded away; computers in Technical Camera mode start with it shown (Rob de Loe, 2026-11-08)
  const upd=()=>{const off=pn.classList.contains('legoff');lt.setAttribute('aria-expanded',off?'false':'true');lt.querySelector('.chev').textContent=off?'▸':'▾';
   document.getElementById('leg-tog-txt').textContent=(off?'Show ':'Hide ')+(LEARN||TECH?'legend':'legend and details');};
  lt.addEventListener('click',()=>{pn.classList.toggle('legoff');upd();});
@@ -2551,6 +2581,7 @@ const TIPS={
  caxis:()=>"The camera axis is the line straight out from the middle of the sensor, in the direction the camera is pointing. Focus distance is measured along it, to the small cross where the plane of focus crosses it. With no "+(T()?"swing":"tilt")+" it is the same line as the lens axis.",
  laxis:()=>"The lens axis is the line through the lens centre at right angles to the lens. It turns with the lens, so with "+(T()?"swing":"tilt")+" it points away from the camera axis. Focus distance is measured along the camera axis, not along this line.",
  readout:()=>T()?'Sharp along camera axis: the range of distances along the camera axis (the line straight out from the sensor centre) that is acceptably sharp. Plane crosses camera axis: the focus distance, where the plane of focus crosses the camera axis. Horizontal field of view: the angle the sensor sees from side to side. Frame width at focus: how wide the picture frame is at the focus point. Field curvature: the setting chosen under Additional controls. Airy disc: the smallest spot a perfect lens can form at this aperture, compared with the circle of confusion.':'Plane first meets ground: the nearest place to the camera where the plane of focus meets the ground surface. On uneven ground the plane can meet the surface in more than one place. Vertical field of view: the angle the sensor sees from top to bottom. Frame height at focus: how tall the picture frame is at the focus point. Field curvature: the setting chosen under Additional controls. Airy disc: the smallest spot a perfect lens can form at this aperture, compared with the circle of confusion.',
+ savestate:"Saves the setup you have now on this device, in this browser: the view, units, cameras, lens, orientation, all the controls and the background objects. The next time you open the tool here, it starts with that setup. Only one setup is kept; saving again replaces it. Forget saved state removes it, so the tool opens with its usual starting values; Reset All leaves it alone. Your browser or device may delete saved data on its own (for example when a private window is closed or space runs low), so use Save link for a setup you want to keep for good.",
  link:"Makes a web address (a link) that holds every setting you have now: the view, units, technical camera, digital camera, lens, orientation, ground surface, all the controls and the background objects. Open it in a new browser window or send it to someone to get the same setup. The link is copied to the clipboard, ready to paste. It opens the shared version of the tool at rcdeloe.github.io/TechCam-Tilt-shift-Calculator. Nothing is stored on a server: the whole setup is in the link.",
  shot:'Generate and save a summary image of the current view and key parameters as a JPEG or PDF, or copy it to the clipboard as an image. Shift-click (or a long press on a phone) on Copy to clipboard copies a smaller image: 1800 pixels on the long edge, JPEG quality 75%.'
 };
@@ -2581,9 +2612,9 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
  const wr=['reset','reset-adj'].map(id=>{const b=document.getElementById(id);return b.closest('.bw')||b;}),home=wr[0].parentNode,next=wr[1].nextSibling;
  window.placeResets=()=>{const there=TECH&&getComputedStyle(lt).display!=='none';
   if(there&&wr[0].parentNode!==row){wr.forEach(w=>row.appendChild(w));}
-  else if(!there&&wr[0].parentNode===row){wr.forEach(w=>home.insertBefore(w,next));}
-  document.getElementById('reset-adj').textContent=there?'Reset Adj':'Reset Adjustments';}; // beside Show legend there is no room for the full name in portrait, so phones use the short name in both orientations
- addEventListener('resize',placeResets);placeResets();}wrapWith(document.getElementById('shot-btn'),'shot','Screenshot',true);wrapWith(document.getElementById('link-btn'),'link','Save link',true);
+  else if(!there&&wr[0].parentNode===row){wr.forEach(w=>home.insertBefore(w,next&&next.parentNode===home?next:null));}
+  document.getElementById('reset-adj').textContent='Reset Adjustments';}; // the full name everywhere: on phones it wraps to its own line beside Show legend (Rob de Loe, 2026-11-08)
+ addEventListener('resize',placeResets);placeResets();}wrapWith(document.getElementById('shot-btn'),'shot','Screenshot',true);wrapWith(document.getElementById('link-btn'),'link','Save link',true);wrapWith(document.getElementById('savegrp'),'savestate','Save state',true);
  addBubble(document.querySelector('.panel.objs h2'),'objs','background objects');
  {const o=document.getElementById('out'),w=document.createElement('div');w.className='readoutw';w.style.position='relative';o.parentNode.insertBefore(w,o);w.appendChild(o);const b=mkBubble('readout','the results');b.style.cssText='position:absolute;right:0;top:12px;margin:0';w.appendChild(b);}
  const ov=document.getElementById('sceneTips');
@@ -2636,7 +2667,7 @@ let LOCKWAS=null;
 function lockControls(){ // until the camera setup is complete every control outside it is locked (Help, Reset All, Reset Adjustments, Screenshot, Save link and the switch between the two views stay available)
  const lock=TECH&&!setupDone();document.body.classList.toggle('pending',lock);if(!lock&&LOCKWAS===false)return;LOCKWAS=lock; // nothing to undo once unlocked: skip the walk over every control on each frame
  document.querySelectorAll('main input,main select,main button,aside input,aside select,aside button').forEach(e=>{
-  if((e.closest('#camsetup')&&!e.closest('.row:has(#n_fl)'))||e.classList.contains('ib')||e.closest('.shotrow')||e.id==='help-btn'||e.id==='fs-btn'||e.id==='leg-tog'||e.id==='reset'||e.id==='reset-adj'||e.id==='vw-side'||e.id==='vw-top'){if(e.dataset.lk){e.disabled=false;delete e.dataset.lk;}return;}
+  if((e.closest('#camsetup')&&!e.closest('.row:has(#n_fl)'))||e.classList.contains('ib')||e.closest('.shotrow')||e.id==='help-btn'||e.id==='fs-btn'||e.id==='leg-tog'||e.id==='reset'||e.id==='reset-adj'||e.id==='vw-side'||e.id==='vw-top'||e.classList.contains('simpbtn')){if(e.dataset.lk){e.disabled=false;delete e.dataset.lk;}return;}
   if(lock){if(!e.disabled){e.disabled=true;e.dataset.lk='1';}}
   else if(e.dataset.lk){e.disabled=!!e.closest('.row.locked');delete e.dataset.lk;}});}
 startBubble();
@@ -2741,10 +2772,23 @@ document.getElementById('link-btn').addEventListener('click',async()=>{
  btn.textContent=ok?'Link copied':'Copy not available here';clearTimeout(btn.t);btn.t=setTimeout(()=>{btn.textContent='Save link';},2400);
 });
 addEventListener('hashchange',restoreFromHash);
+// Save state (Rob de Loe, 2026-11-08): one saved setup per browser on this device, kept in the browser's local storage. The tool opens with it
+// unless the address carries a saved link (#s=...), which wins. Reset All leaves it alone; Forget saved state removes it.
+const SAVE_KEY='techcam.savedState.v1';
+const store={get(){try{return localStorage.getItem(SAVE_KEY);}catch(_){return null;}},set(v){try{localStorage.setItem(SAVE_KEY,v);return true;}catch(_){return false;}},del(){try{localStorage.removeItem(SAVE_KEY);}catch(_){}}};
+function toast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.setAttribute('role','status');document.body.appendChild(t);}
+ t.textContent=msg;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),3500);}
+function updForget(){const f=document.getElementById('forget-btn');if(f)f.disabled=!store.get();}
+document.getElementById('save-btn').addEventListener('click',()=>{const b=document.getElementById('save-btn'),ok=store.set(JSON.stringify(getState()));
+ b.textContent=ok?'State saved':'Saving not available here';clearTimeout(b.t);b.t=setTimeout(()=>{b.textContent='Save state';},2400);updForget();});
+document.getElementById('forget-btn').addEventListener('click',()=>{store.del();updForget();toast('Saved state forgotten. The tool will open with its usual starting values.');});
+function restoreSaved(){if(/^#s=/.test(location.hash))return;const v=store.get();if(!v)return;
+ try{const st=JSON.parse(v);if(st&&st.md===2){applyState(st);if(setupDone()){const ad=document.getElementById('adjsec');if(ad)ad.open=true;}toast('Restored your saved state.');}}catch(e){console.warn('Could not read the saved state',e);}}
 
 placeUnits();
 setMode('tech');
 restoreFromHash();
+restoreSaved();updForget();
 
 draw();
 </script>
