@@ -100,7 +100,7 @@ body.tech .panel.objs-open .panel.objs.objs-in{display:block}
 body.tech .panel.objs.objs-in>h2{display:none}
 body:not(.tech) #objs-tog,body:not(.tech) .bw:has(>#objs-tog){display:none!important}
 body.tech #objs-tog[aria-pressed="true"]{background:var(--accent);color:var(--panel);border-color:var(--accent)}
-#adjsec>summary .simpbtn[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.simpbtn[aria-pressed="true"]{background:var(--accent)!important;color:var(--panel)!important;border-color:var(--accent)!important}
 html.phone-land body.tech #adjsec{margin-top:12px}
 /* Simplify on a sideways phone: tighter spacing between the adjustments, so one more fits on screen (Rob de Loe, 2026-11-09) */
 html.phone-land.simple body.tech #main-controls .row{margin-bottom:4px;row-gap:0}
@@ -132,14 +132,17 @@ body.tech .panel.legoff .legend,body.tech .panel.legoff .readoutw{display:none}
 .lower.lo-right{grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
 .lower.lo-right>div,.lower.lo-right .rightcol{display:block}
 .lower.lo-right>div>.panel+.panel{margin-top:16px}
-#adjsec>summary .simpbtn{margin-left:10px;padding:2px 10px;font:600 12px/1.4 inherit;font-family:inherit;color:var(--accent);background:var(--ctl);border:1px solid var(--accent);border-radius:6px;cursor:pointer;vertical-align:1px}
-#adjsec>summary .simpbtn:hover,#adjsec>summary .simpbtn:focus-visible{background:var(--accent);color:var(--panel);outline:none}
-body.pending #adjsec>summary .simpbtn{display:none}
+body.tech .resetrow{gap:8px;align-items:center}
+body.tech .resetrow .simpbtn{color:var(--accent);border-color:var(--accent)}
+html.simple body.tech #adjsec>summary{display:none!important}
+body.tech #adjsec>summary{width:fit-content;width:-moz-fit-content;padding-right:6px} /* only the heading itself opens and closes the section */
+
+body.pending .simpbtn{display:none!important}
 .savegrp{display:inline-flex;gap:8px;flex-wrap:wrap}
 body:not(.tech) .bw:has(>#savegrp),body:not(.tech) #savegrp{display:none!important}
 #toast{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;max-width:calc(100vw - 32px);box-sizing:border-box;padding:8px 14px;border-radius:8px;background:var(--fg);color:var(--panel);font-size:13px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.on{opacity:1}
-@media(pointer:coarse){#adjsec>summary .simpbtn{padding:4px 12px;font-size:13px;min-height:30px}} /* an easier tap on phones */
+
 #fs-btn[hidden]{display:none!important}
 .bw.inl{display:inline-flex}.bw.inl>:first-child{flex:none}
 #tip{position:fixed;z-index:50;max-width:min(320px,calc(100vw - 24px));max-height:60vh;overflow:auto;background:var(--panel);color:var(--fg);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25)}
@@ -299,7 +302,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="share-btn" class="helpbtn" hidden aria-haspopup="true" aria-expanded="false" aria-controls="share-pop">Save &amp; share ▾</button><div id="share-pop" class="sharepop" hidden role="group" aria-label="Save and share"></div><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button><button type="button" id="about-btn" class="helpbtn aboutbtn" data-tip="about">About</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.373</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.374</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -2536,11 +2539,15 @@ function placeSetup(){ // Technical Camera mode: Technical camera, Digital camer
 // Additional controls and the panes for Screenshot / Save link, Add objects and Auto; another long press brings them back (Rob de Loe, 2026-11-08)
 function adjTitle(){const d=document.getElementById('adjsec');if(!d)return;const sm=d.querySelector('summary'),simple=document.documentElement.classList.contains('simple');
  sm.textContent='Adjustments';
- if(TECH){ /* a Simplify / Show all button beside the heading, on phones and computers alike; it replaced the phones' long press (Rob de Loe, 2026-11-08) */
-  const b=document.createElement('button');b.type='button';b.className='simpbtn';b.textContent='Simplify';b.setAttribute('aria-pressed',simple?'true':'false'); /* like Help: solid teal while on (Rob de Loe, 2026-11-09) */
-  b.title=simple?'Show Setup, Additional controls and the other panes again':'Hide everything except the diagram and the adjustments';
-  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(!setupDone())return;document.documentElement.classList.toggle('simple');d.open=true;adjTitle();draw();});
-  sm.appendChild(b);}}
+ /* Technical Camera (Rob de Loe, 2026-11-09): the Simplify button sits at the end of the Adjustments section, to the left of Reset Adjustments. While on, the
+    Adjustments heading is hidden and the button reads Restore All; pressing it again brings everything back. */
+ let b=document.getElementById('simp-btn');
+ if(!b){b=document.createElement('button');b.type='button';b.id='simp-btn';b.className='btn simpbtn';
+  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(!setupDone())return;document.documentElement.classList.toggle('simple');d.open=true;adjTitle();draw();});}
+ b.textContent=simple?'Restore All':'Simplify';b.setAttribute('aria-pressed',simple?'true':'false');
+ b.title=simple?'Show Setup, the Adjustments heading and Additional controls again':'Hide everything except the diagram and the adjustments';
+ const row=d.querySelector('.resetrow');
+ if(TECH&&row){if(b.parentNode!==row||row.firstElementChild!==b)row.insertBefore(b,row.firstChild);}else if(b.parentNode)b.remove();}
 function wireSimplify(sm){let tm=null,fired=false;sm.style.webkitTouchCallout='none';sm.style.userSelect='none';sm.style.webkitUserSelect='none';
  sm.addEventListener('pointerdown',e=>{fired=false;if(!isPhone()||!setupDone())return;tm=setTimeout(()=>{tm=null;fired=true;document.documentElement.classList.toggle('simple');const ad=document.getElementById('adjsec');if(ad)ad.open=true;adjTitle();if(navigator.vibrate)try{navigator.vibrate(30);}catch(_){}draw();},500);});
  ['pointerup','pointercancel','pointerleave'].forEach(t=>sm.addEventListener(t,()=>{if(tm){clearTimeout(tm);tm=null;}}));
@@ -2707,7 +2714,7 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
    [w(sb),menu,w(lb),hr,w(sg)].forEach(e=>{if(e&&e.parentNode!==pop)pop.appendChild(e);});
    const cs=document.getElementById('camsetup'),adj=document.getElementById('adjsec');
    if(cs&&cs.lastElementChild!==rowAll)cs.appendChild(rowAll);if(adj&&adj.lastElementChild!==rowAdj)adj.appendChild(rowAdj); /* kept last in their sections */
-   const ra=w(RA),rd=w(RD);if(rowAll.isConnected&&ra.parentNode!==rowAll)rowAll.appendChild(ra);if(rowAdj.isConnected&&rd.parentNode!==rowAdj)rowAdj.appendChild(rd);}
+   const ra=w(RA),rd=w(RD);if(rowAll.isConnected&&ra.parentNode!==rowAll)rowAll.appendChild(ra);if(rowAdj.isConnected&&rd.parentNode!==rowAdj)rowAdj.appendChild(rd);adjTitle();}
   else{showPop(false);
    if(aw&&placeTechButtons.autoHome&&aw.parentNode!==placeTechButtons.autoHome)placeTechButtons.autoHome.insertBefore(aw,placeTechButtons.autoHome.firstChild);
    if(objs.parentNode!==objsHome){objsHome.insertBefore(objs,objsNext&&objsNext.parentNode===objsHome?objsNext:null);objs.classList.remove('objs-in');}
