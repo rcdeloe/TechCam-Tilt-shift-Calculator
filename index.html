@@ -254,7 +254,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.364</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.365</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -1733,13 +1733,18 @@ const NOP=new Proxy(function(){},{get:(t,k)=>k===Symbol.toPrimitive?()=>0:k==='m
 const off=document.createElement('canvas');
 function draw(){sx=SX0;try{return draw0();}finally{sx=SX0;try{startBubble();lockControls();combNote();}catch(_){}try{fitScene();}catch(_){}}}
 // phone held sideways: the diagram is narrowed (and centred) so that it, the readout under it and the Show legend / reset buttons all fit on the screen without scrolling (Rob de Loe, 2026-11-08)
+/* Phone held sideways (Rob de Loe, 2026-11-09): the diagram keeps the full width of its column and gives up height instead, so the readings and the
+   Show legend row stay on screen. It used to keep its shape and shrink in width, but the pane never gets shorter than 220 px, so on a real phone it
+   shrank to a narrow strip. PL_H is the tallest the pane may be (0 = no limit); the scales across and up stay equal, so a shorter pane shows less height. */
+let PL_H=0;const PL_HMIN=150;
 function fitScene(){if(fitScene.busy)return;const pl=document.documentElement.classList.contains('phone-land');
- if(!pl){if(sc.style.width){sc.style.width='';fitScene.busy=true;try{draw();}finally{fitScene.busy=false;}}return;}
- const m=document.querySelector('.wrap main'),row=document.querySelector('.legrow'),pan=sc.parentNode;if(!m||!row)return;
- const st=m.scrollTop,mb=m.getBoundingClientRect().bottom,rb=row.getBoundingClientRect().bottom+st,ch=sc.getBoundingClientRect().height,cw=sc.getBoundingClientRect().width;if(!(ch>0&&cw>0))return;
- const full=pan.clientWidth-parseFloat(getComputedStyle(pan).paddingLeft)-parseFloat(getComputedStyle(pan).paddingRight);
- const over=rb+8-mb,want=Math.max(220,Math.min(full,(ch-over)*cw/ch));
- if(Math.abs(want-cw)>2){sc.style.width=Math.round(want)+'px';fitScene.busy=true;try{draw();}finally{fitScene.busy=false;}}}
+ const redraw=()=>{fitScene.busy=true;try{draw();}finally{fitScene.busy=false;}};
+ if(!pl){if(sc.style.width||PL_H){sc.style.width='';PL_H=0;redraw();}return;}
+ if(sc.style.width){sc.style.width='';redraw();}
+ const m=document.querySelector('.wrap main'),row=document.querySelector('.legrow');if(!m||!row)return;
+ const st=m.scrollTop,mb=m.getBoundingClientRect().bottom,rb=row.getBoundingClientRect().bottom+st,ch=sc.getBoundingClientRect().height;if(!(ch>0))return;
+ const want=Math.max(PL_HMIN,Math.floor(ch-(rb+8-mb)));
+ if(Math.abs(want-(PL_H||ch))>2){PL_H=want;redraw();}}
 function draw0(){
  TA=[];PENDING=[];
  if(LENS&&LENS.circAp&&CIRCAUTO!==null&&Math.abs(V.circ-CIRCAUTO)<1e-9){const c=circAt(LENS,V.ap);if(c!==CIRCAUTO){CIRCAUTO=c;setVal('circ',c);}} // the image circle follows the aperture
@@ -1750,7 +1755,7 @@ function draw0(){
  const CV=curved; // field curvature on: the focus surface and the limits are curves, drawn inside the field of view
  // the canvas is sized to its on-screen width so text and handles stay a usable size on phones; drawing is in CSS pixels
  const dpr=forceDpr||Math.min(3,(typeof devicePixelRatio==='number'&&devicePixelRatio)||1),rc=sc.getBoundingClientRect();
- const RW=Math.max(TECH?200:300,Math.round(rc.width)||960),RHt=Math.round(RW*0.675);
+ const RW=Math.max(TECH?200:300,Math.round(rc.width)||960),plH=PL_H>0&&document.documentElement.classList.contains('phone-land')?PL_H:0,RHt=plH?Math.min(Math.round(RW*0.675),plH):Math.round(RW*0.675);
  // in the top view the scene is laid out as if it were the side view (distance along the width, left/right along the height) and then turned a quarter turn
  // anticlockwise, so the camera ends up at the bottom; W and H below are the dimensions of that unturned layout
  const W=topView?RHt:RW;
@@ -1762,7 +1767,7 @@ function draw0(){
  // Above the cut-off scene width (hCut) the scene widens, if need be, so that the lens (plus room for its label) fits above the ground line; that only happens
  // for a camera higher than 175 cm. Below the cut-off the width shown is the width asked for, the camera is kept at 175 cm or lower, and the pane grows
  // taller instead, so the scales across and up stay equal (angles on screen stay true).
- const H0=topView?RW:Math.max(220,Math.round(W*0.62)),narrow=!topView&&V.view<hCut();
+ const H0=topView?RW:plH?Math.max(PL_HMIN,Math.min(Math.round(W*0.62),plH)):Math.max(220,Math.round(W*0.62)),narrow=!topView&&V.view<hCut();
  const xr=topView||narrow?xr0:Math.max(xr0,(Math.max(M.h,0)+0.7)/0.64*W/H0);
  // In the narrow view less is shown below the ground as the scene shrinks, down to 0.5 m, so the pane grows as little as it can.
  const needUp=Math.max(M.h,0)+0.7,yrN2=narrow?Math.max(xr0*H0/W,needUp+0.5):0,yBelow=narrow?Math.min(0.36*yrN2,yrN2-needUp):null;
