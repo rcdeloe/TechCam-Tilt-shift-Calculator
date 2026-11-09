@@ -66,6 +66,7 @@ body.help .ib,.ib.always{display:inline-flex}
 .ib.startarrow:hover,.ib.startarrow:focus-visible{background:#0b5f75;outline:none}
 .ib.startarrow:focus-visible{filter:drop-shadow(0 0 2px #0e7490)}
 body.help .readout{padding-right:34px}
+.shutwarn{margin:-2px 0 14px;color:#b91c1c;font-weight:600;border-left:3px solid #b91c1c;padding-left:8px}.shutwarn[hidden]{display:none}
 .ib.nb{display:inline-flex;font:700 13px/1 system-ui,sans-serif;font-style:normal;background:#b45309;border-color:#b45309;color:#fff}
 .ib.nb[hidden]{display:none}
 :root[data-theme="dark"] .ib.nb{background:#fbbf24;border-color:#fbbf24;color:#1c1917}
@@ -306,7 +307,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="share-btn" class="helpbtn" hidden aria-haspopup="true" aria-expanded="false" aria-controls="share-pop">Save &amp; share ▾</button><div id="share-pop" class="sharepop" hidden role="group" aria-label="Save and share"></div><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button><button type="button" id="about-btn" class="helpbtn aboutbtn" data-tip="about">About</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.377</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.379</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -341,6 +342,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
    <div class="row" id="rot-row" style="display:none;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:10px;margin-bottom:8px"><label id="rot-label" style="font-size:12px;margin:0">Rotate 90 degrees</label><div class="viewsw" id="rot-group" style="margin:0;font-size:12px" role="group" aria-label="Rotate 90 degrees"><button type="button" id="rot-off" style="padding:2px 9px" role="switch" aria-checked="true" class="on">Off</button><button type="button" id="rot-on" style="padding:2px 9px" role="switch" aria-checked="false">On</button></div></div>
    <div class="row" id="rev-row" style="display:none;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:10px;margin-bottom:8px"><label id="rev-label" style="font-size:12px;margin:0">Reverse mount</label><div class="viewsw" id="rev-group" style="margin:0;font-size:12px" role="group" aria-label="Reverse mount"><button type="button" id="rev-off" style="padding:2px 9px" role="switch" aria-checked="true" class="on">Off</button><button type="button" id="rev-on" style="padding:2px 9px" role="switch" aria-checked="false">On</button></div></div>
    <div class="row" id="lens-row"><label for="n_lens">Choose example lens</label><div id="lens-menu" style="grid-column:1/3;display:none;position:relative"><button type="button" id="lens-btn" class="lbtn" aria-haspopup="menu" aria-expanded="false" aria-label="Lens"><span id="lens-btn-txt">Choose a lens</span><span aria-hidden="true">▾</span></button><button type="button" class="minfo selinfo" id="lens-info" data-ilens="" hidden aria-label="About the chosen lens" title="About the chosen lens">i</button><div id="lens-pop" class="xpop" role="menu" hidden></div></div><select id="n_lens" style="grid-column:1/3"></select></div>
+   <p class="note shutwarn" id="shut-warn" role="alert" hidden></p>
    <p class="note" id="lens-acc" style="display:none;margin:-6px 0 12px;color:#9a4a00;font-weight:600"></p>
    <p class="note" id="lens-acc2" style="display:none;margin:-6px 0 12px;color:#9a4a00;font-weight:600"></p>
    <p class="note" id="lens-panel" style="display:none;margin:-6px 0 12px;color:#9a4a00;font-weight:600"></p>
@@ -398,12 +400,12 @@ const DMODELS=[
  {id:'ffsony61',name:'Sony a7R IV / IVA / a7R V / a7CR',cls:6,pitch:3.76,mount:'sony',grp:'Mirrorless bodies',sub:'Full frame'},
  {id:'ffsony67',name:'Sony a7R VI',cls:6,pitch:3.57,est:'pitch',mount:'sony',grp:'Mirrorless bodies',sub:'Full frame'}, // 66.8 MP; pitch worked out from the sensor size (not published)
  {id:'ffsigma',name:'Sigma fp L',cls:6,pitch:3.76,mount:'sigma',grp:'Mirrorless bodies',sub:'Full frame'},
- {id:'cfv100',name:'Hasselblad CFV 100C',cls:4,pitch:3.76,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
+ {id:'cfv100',eshutter:true,name:'Hasselblad CFV 100C',cls:4,pitch:3.76,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
  {id:'iq350',name:'Phase One IQ3 50 / IQ250 / IQ150',cls:4,pitch:5.3,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
  {id:'iq140',name:'Phase One IQ140',cls:4,pitch:6.0,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
  {id:'oth4',name:'Other 43.8 \u00d7 32.9 mm',cls:4,pitch:null,grp:'Medium format backs 43.8 \u00d7 32.9 mm'},
- {id:'iq4150',name:'Phase One IQ4 150 (& Achromatic)',cls:5,pitch:3.76,grp:'Medium format backs 53.4 \u00d7 40 mm'},
- {id:'iq3100',name:'Phase One IQ4 100 Trichromatic / IQ3 100 (all)',cls:5,pitch:4.6,grp:'Medium format backs 53.4 \u00d7 40 mm'},
+ {id:'iq4150',eshutter:true,name:'Phase One IQ4 150 (& Achromatic)',cls:5,pitch:3.76,grp:'Medium format backs 53.4 \u00d7 40 mm'},
+ {id:'iq3100',eshutter:true,name:'Phase One IQ4 100 Trichromatic / IQ3 100 (all)',cls:5,pitch:4.6,grp:'Medium format backs 53.4 \u00d7 40 mm'},
  {id:'iq380',name:'Phase One IQ3 80 / IQ280 / IQ180',cls:5,pitch:5.2,est:'size',grp:'Medium format backs 53.4 \u00d7 40 mm'},
  {id:'iq360',name:'Phase One IQ3 60 / IQ260 / IQ160',cls:5,pitch:6.0,est:'size',grp:'Medium format backs 53.4 \u00d7 40 mm'},
  {id:'oth5',name:'Other 53.4 \u00d7 40 mm',cls:5,pitch:null,grp:'Medium format backs 53.4 \u00d7 40 mm'}];
@@ -1028,9 +1030,13 @@ const lensAllows=(L,c)=>!L||(ciStr(L,c)?c.sensors.some(k=>ciClass(L,c,k)&&circFi
 const LENS_ALIAS={cam_actar_py_90:{from:'sch_py_90',over:{name:'Cambo Actar-Pyrite 90mm f/4.5',mfr:'Cambo',fmt:'Digital'}}};
 for(const [k,a] of Object.entries(LENS_ALIAS)){const o=TLENSES[a.from];TLENSES[k]=Object.assign({},o,a.over,{cams:CAMERAS.filter(c=>lensAllows(o,c)&&/^cambo_/.test(c.id)&&!c.panelTilt).map(c=>c.id)}); // Cambo Actar lenses are for Cambo technical cameras only, and not the panel cameras
  if(EST_LENS[a.from])EST_LENS[k]=EST_LENS[a.from];}
-const modelAllows=(c,m,L=LENS)=>!c||!m||!(ciRate(L,c,m)==='x'||(m.cls===SENS_TECH.ff&&c.ffMounts&&!c.ffMounts.includes(m.mount))||(c.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!c.onlyBacks.includes(m.id))||(c.onlyBack&&m.cls===SENS_TECH.back2&&!c.onlyBack.includes(m.id))||(c.onlyModels&&m.cls===SENS_TECH.mirrorless&&!c.onlyModels.includes(m.id))) // some cameras take only certain mirrorless bodies (onlyModels: model ids)
+// Lenses with no shutter of their own (the Cambo Actars, the Actar-Pyrite 90 included: it is permanently mounted on its board (Rob de Loe, 2026-11-09)) need a digital back with an electronic shutter; mirrorless cameras have one. Backs with one: eshutter:true
+// (Hasselblad CFV 100C; Phase One IQ4 150 and Achromatic, IQ4 100 Trichromatic and IQ3 100 (& Achromatic): Phase One IQ4 technical specifications; Phase One IQ Camera System Overview flyer, 2018; Digital Transitions, "Phase One's Electronic Shutter in Detail") (Rob de Loe, 2026-11-09)
+const needsES=L=>!!(L&&L.mfr==='Cambo'&&/^Cambo Actar[ -]/.test(L.name)),isBack=m=>!!m&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2),shutterOK=(L,m)=>!(needsES(L)&&isBack(m)&&!m.eshutter);
+let SHUTWARN='',LASTPICK=''; // the red warning when a lens and a back cannot work together; which of the two was chosen last
+const modelAllows=(c,m,L=LENS)=>!c||!m||!(!shutterOK(L,m)||ciRate(L,c,m)==='x'||(m.cls===SENS_TECH.ff&&c.ffMounts&&!c.ffMounts.includes(m.mount))||(c.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!c.onlyBacks.includes(m.id))||(c.onlyBack&&m.cls===SENS_TECH.back2&&!c.onlyBack.includes(m.id))||(c.onlyModels&&m.cls===SENS_TECH.mirrorless&&!c.onlyModels.includes(m.id))) // some cameras take only certain mirrorless bodies (onlyModels: model ids)
 const lensOK=L=>{ // can this lens still be chosen, given the technical camera and digital camera chosen so far?
- if(!TECH)return true;if(TCAM&&!CAMAUTO)return variantsOf(TCAM).some(v=>lensAllows(L,v)&&(DIG===null||DIGAUTO||(camAllows(v,DIG,L)&&modelAllows(v,dmodel(DMOD),L))));if(!L.cams)return true;
+ if(!TECH)return true;if(DIG!==null&&!DIGAUTO&&!shutterOK(L,dmodel(DMOD)))return false;if(TCAM&&!CAMAUTO)return variantsOf(TCAM).some(v=>lensAllows(L,v)&&(DIG===null||DIGAUTO||(camAllows(v,DIG,L)&&modelAllows(v,dmodel(DMOD),L))));if(!L.cams)return true;
  return CAMERAS.some(c=>camVis(c)&&lensAllows(L,c)&&(DIG===null||DIGAUTO||(camAllows(c,DIG,L)&&modelAllows(c,dmodel(DMOD),L))));}; // a lens may list the technical cameras it fits (cams: [camera ids]); without the list it fits any // can this technical camera use that digital camera?
 let CUSTOMON=false;const camVis=c=>camMfr(c)!=='Custom'||CUSTOMON;
 const CAM_MFR={cambo:'Cambo',arca:'Arca-Swiss',linhof:'Linhof',swebo:'Swebo',alpa:'Alpa'},camMfr=c=>c.mfr||CAM_MFR[c.id.split('_')[0]]||'Custom'; // a camera added to the spreadsheet with manufacturer Custom (or none) goes under Custom
@@ -1100,6 +1106,10 @@ function estRefresh(){ // show or hide the small Estimated tags beside the resul
 }
 const LKMEMO=new WeakMap(),lensKey=()=>{if(!LENS)return 'custom';let k=LKMEMO.get(LENS);if(k===undefined){const S=LSRC();k=Object.keys(S).find(x=>S[x]===LENS);if(k!==undefined)LKMEMO.set(LENS,k);}return k;}; // remembered per lens: it is looked up many times a frame
 function equipSync(){ // keep the Technical camera, Digital camera and lens choices consistent: each narrows the others' lists, and a lone remaining technical camera is made for you, but never the digital camera
+ if(TECH&&LENS&&DIG!==null&&!shutterOK(LENS,dmodel(DMOD))){const m=dmodel(DMOD); // a lens with no shutter and a back without an electronic shutter (from a switch, a link or a saved state): the one chosen last stays
+  if(LASTPICK==='lens'){SHUTWARN=`The ${LENS.name} has no shutter of its own and needs a digital back with an electronic shutter. The ${m.name} has none, so the digital camera has been cleared.`;DIG=null;DMOD=null;DIGAUTO=false;}
+  else{SHUTWARN=`The ${m.name} has no electronic shutter, so it cannot use the ${LENS.name}, which has no shutter of its own. The lens has been cleared.`;setLens('custom');LENSCUSTOM=false;}}
+ shutWarn();
  if(TCAM&&LENS&&!variantsOf(TCAM).some(v=>lensAllows(LENS,v))){TCAM=null;CAMAUTO=false;if(DIGAUTO){DIG=null;DIGAUTO=false;}} // the lens just chosen does not fit the camera that was filled in for you
  if(TCAM&&DIG!==null&&!variantsOf(TCAM).some(v=>lensAllows(LENS,v)&&camAllows(v,DIG)&&(DIGAUTO||modelAllows(v,dmodel(DMOD))))){DIG=null;DIGAUTO=false;}
  if(!TCAM)CAMAUTO=false;
@@ -1112,10 +1122,11 @@ function equipSync(){ // keep the Technical camera, Digital camera and lens choi
  if(TCAM&&TCAM.onlyModels&&DIG===SENS_TECH.mirrorless&&!TCAM.onlyModels.includes(DMOD))DMOD=TCAM.onlyModels[0]; // a camera that takes one mirrorless body starts on it // a camera class filled in for you starts at that class's Other entry
  fillLensList();fillCameraList();fillSensorList();applySensor(DIG!==null?DIG:SENS_TECH.mirrorless);camLimits();updateCamNote();digNote();estRefresh();notesRefresh();
 }
+function shutWarn(){const e=document.getElementById('shut-warn');if(!e)return;const t=TECH?SHUTWARN:'';e.textContent=t;e.hidden=!t;}
 function digNote(){const e=document.getElementById('dig-note');if(!e)return;const t=''; /* the camera's model note (GFX 50R only on the RM3Di and Factum) is on the camera card (Rob de Loe, 2026-11-06) */ /* modelNoteFor: show the note only once one of these digital camera models is chosen (the GFX 50 series option stands for the 50R alone on the RM3Di and Factum) */e.textContent=t;e.style.display=t?'':'none';notesRefresh();} // a note for cameras that take only certain bodies
 
 function setCamera(id){TCAM=CAMERAS.find(x=>x.id===id)||CAMERAS.find(x=>camGroup(x)===id)||null;if(TCAM&&camMfr(TCAM)==='Custom')CUSTOMON=true;CAMAUTO=false;equipSync();}
-function digChosen(v){const m=dmodel(v);DIG=m?m.cls:null;DMOD=m?m.id:null;DIGAUTO=false;if(TCAM&&DIG!==null&&!variantsOf(TCAM).some(x=>camAllows(x,DIG)&&modelAllows(x,m))){TCAM=null;CAMAUTO=false;}equipSync();setLens(lensKey());}
+function digChosen(v){LASTPICK='dig';SHUTWARN='';const m=dmodel(v);DIG=m?m.cls:null;DMOD=m?m.id:null;DIGAUTO=false;if(TCAM&&DIG!==null&&!variantsOf(TCAM).some(x=>camAllows(x,DIG)&&modelAllows(x,m))){TCAM=null;CAMAUTO=false;}equipSync();setLens(lensKey());}
 const CAM_MINFAIL=(ct,f)=>TCAM.extMin*ct>f*1.0001; // the lens is too short to reach infinity at the camera's minimum extension
 function extLimits(){const d0=DMIN,f0=V.focus;extLimits0(); // a macro lens with a working range that stops short of infinity (dmaxLens, metres from the lens) cannot be focused farther than that,
  // and not nearer than its range either (dminLens). If the camera cannot reach the working range at all, an extension tube or longer rail is assumed, as for other lenses.
@@ -1337,6 +1348,7 @@ function lensInfoHTML(k){
  if(L.dmaxLens>0)h.push(`<p>Focus range: about ${+(+L.dminLens).toFixed(2)} to ${+(+L.dmaxLens).toFixed(2)} m from the lens (its working range).</p>`);
  {const src=[ci&&ci[5]?ci[5]+(xt?' (image circle)':''):'',xt?'Digital Transitions XT lens specifications and Phase One XT lens fact sheet, 2024 (X‑Shutter aperture)':''].filter(Boolean);if(src.length)h.push(`<p class="ii-s">Source: ${infoEsc(src.join('; '))}.</p>`);}
  if(L.note)h.push(`<p class="ii-s">${infoEsc(L.note)}</p>`);
+ if(needsES(L))h.push('<p class="ii-s">No shutter of its own: use a mirrorless camera, or a digital back with an electronic shutter (Hasselblad CFV 100C, Phase One IQ4 150, IQ4 100 Trichromatic or IQ3 100, including the Achromatic). Backs without one are not offered with this lens.</p>');
  if((L.mfr==='Rodenstock'||L.mfr==='Schneider-Kreuznach')&&CAMERAS.some(c=>/^alpa_/.test(c.id)&&lensAllows(L,c)))h.push('<p class="ii-s">On Alpa cameras, Alpa-branded versions of this lens use Alpa nomenclature.</p>'); // moved here from the note beside Lens (Rob de Loe, 2026-11-06)
  return h.join('');}
 const iiEl=document.getElementById('iteminfo');let iiBack=null;
@@ -1380,13 +1392,13 @@ function buildDigMenu(groups){
 }
 function fillSensorList(){const n=document.getElementById('n_sensor');if(!n)return;const idx=techSensors();
  if(TECH){ // the models whose size class the chosen camera and lens allow, grouped
-  const groups=[];DMODELS.filter(m=>!m.hide&&idx.includes(m.cls)&&(!TCAM||m.cls!==SENS_TECH.mirrorless||!TCAM.onlyModels||TCAM.onlyModels.includes(m.id))&&!(TCAM&&TCAM.onlyBack&&m.cls===SENS_TECH.back2&&!TCAM.onlyBack.includes(m.id))&&!(TCAM&&TCAM.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!TCAM.onlyBacks.includes(m.id))&&!(TCAM&&m.cls===SENS_TECH.ff&&!variantsOf(TCAM).some(v=>modelAllows(v,m)))).forEach(m=>{let g=groups.find(x=>x[0]===m.grp);if(!g)groups.push(g=[m.grp,[]]);g[1].push(m);});
+  const groups=[];DMODELS.filter(m=>!m.hide&&idx.includes(m.cls)&&shutterOK(LENS,m)&&(!TCAM||m.cls!==SENS_TECH.mirrorless||!TCAM.onlyModels||TCAM.onlyModels.includes(m.id))&&!(TCAM&&TCAM.onlyBack&&m.cls===SENS_TECH.back2&&!TCAM.onlyBack.includes(m.id))&&!(TCAM&&TCAM.onlyBacks&&(m.cls===SENS_TECH.back1||m.cls===SENS_TECH.back2)&&!TCAM.onlyBacks.includes(m.id))&&!(TCAM&&m.cls===SENS_TECH.ff&&!variantsOf(TCAM).some(v=>modelAllows(v,m)))).forEach(m=>{let g=groups.find(x=>x[0]===m.grp);if(!g)groups.push(g=[m.grp,[]]);g[1].push(m);});
   n.innerHTML='<option value="">Choose a camera</option>'+groups.map(([g,ms])=>`<optgroup label="${g}">${ms.map(m=>`<option value="${m.id}">${m.name}${m.pitch?' \u2013 '+m.pitch+' \u00b5m':''}</option>`).join('')}</optgroup>`).join('');
   n.value=DMOD||'';lockRow('n_sensor',false);n.style.display='none';document.getElementById('dig-menu').style.display='';buildDigMenu(groups);return;}
  n.style.display='';document.getElementById('dig-menu').style.display='none';
  n.innerHTML=idx.map(i=>`<option value="${i}">${SENSORS[i].name}</option>`).join('');
  const want=idx.includes(V.sensor)?V.sensor:idx[0];n.value=want;if(V.sensor!==want)applySensor(want);}
-fillLensList();document.getElementById('n_lens').addEventListener('change',e=>{LENSCUSTOM=e.target.value==='custom';setLens(e.target.value);if(TECH){equipSync();setLens(e.target.value);}draw();}); // in Technical Camera mode the lens narrows the camera list (and may fill it in)
+fillLensList();document.getElementById('n_lens').addEventListener('change',e=>{LASTPICK='lens';SHUTWARN='';LENSCUSTOM=e.target.value==='custom';setLens(e.target.value);if(TECH){equipSync();setLens(e.target.value);}draw();}); // in Technical Camera mode the lens narrows the camera list (and may fill it in)
 document.getElementById('n_camera').addEventListener('change',e=>{setCamera(e.target.value);setLens(lensKey());draw();});
 const apIdx=v=>{let b=0;APS.forEach((a,i)=>{if(Math.abs(a-v)<Math.abs(APS[b]-v))b=i;});return b;};
 function setApList(list){
