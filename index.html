@@ -254,7 +254,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-08 v0.363</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.364</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -2615,7 +2615,17 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
  window.placeResets=()=>{const there=TECH&&getComputedStyle(lt).display!=='none';
   if(there&&wr[0].parentNode!==row){wr.forEach(w=>row.appendChild(w));}
   else if(!there&&wr[0].parentNode===row){wr.forEach(w=>home.insertBefore(w,next&&next.parentNode===home?next:null));}
-  document.getElementById('reset-adj').textContent='Reset Adjustments';}; // the full name everywhere: on phones it wraps to its own line beside Show legend (Rob de Loe, 2026-11-08)
+  document.getElementById('reset-adj').textContent='Reset Adjustments';fitLegrow();}; // the full name everywhere (Rob de Loe, 2026-11-08)
+ /* Keep Show legend, Reset All and Reset Adjustments on one line (Rob de Loe, 2026-11-09). The row had only a few pixels to spare on a 393 px phone, so a phone with
+    a slightly wider system font, a larger text size or a larger display size pushed Reset Adjustments onto a second line. If the row would wrap, its buttons are
+    made smaller step by step (down to 11 px text and tighter padding); only if it still does not fit (usually with Help on, when the (i) bubbles take room) does it wrap. */
+ function fitLegrow(){const row=lt.closest('.legrow');if(!row||!TECH)return;const bs=[...row.querySelectorAll('.legtog,.btn')];
+  const wraps=()=>{const v=[...row.children].filter(e=>e.offsetParent);return v.length>1&&new Set(v.map(e=>Math.round(e.getBoundingClientRect().top))).size>1;};
+  bs.forEach(b=>{b.style.fontSize='';b.style.paddingLeft=b.style.paddingRight='';});row.style.columnGap='';
+  if(!row.offsetParent||!wraps())return;
+  for(const [fs,pad,gap] of [[13,7,5],[12.5,6,4],[12,5,4],[11.5,5,3],[11,4,3]]){bs.forEach(b=>{b.style.fontSize=fs+'px';b.style.paddingLeft=b.style.paddingRight=pad+'px';});row.style.columnGap=gap+'px';if(!wraps())return;}
+  bs.forEach(b=>{b.style.fontSize='';b.style.paddingLeft=b.style.paddingRight='';});row.style.columnGap='';}
+ window.fitLegrow=fitLegrow;
  addEventListener('resize',placeResets);placeResets();}wrapWith(document.getElementById('shot-btn'),'shot','Screenshot',true);wrapWith(document.getElementById('link-btn'),'link','Save link',true);wrapWith(document.getElementById('savegrp'),'savestate','Save state',true);
  addBubble(document.querySelector('.panel.objs h2'),'objs','background objects');
  {const o=document.getElementById('out'),w=document.createElement('div');w.className='readoutw';w.style.position='relative';o.parentNode.insertBefore(w,o);w.appendChild(o);const b=mkBubble('readout','the results');b.style.cssText='position:absolute;right:0;top:12px;margin:0';w.appendChild(b);}
