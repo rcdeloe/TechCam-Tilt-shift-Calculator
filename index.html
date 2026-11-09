@@ -102,6 +102,12 @@ body:not(.tech) #objs-tog,body:not(.tech) .bw:has(>#objs-tog){display:none!impor
 body.tech #objs-tog[aria-pressed="true"]{background:var(--accent);color:var(--panel);border-color:var(--accent)}
 #adjsec>summary .simpbtn[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
 html.phone-land body.tech #adjsec{margin-top:12px}
+/* Simplify on a sideways phone: tighter spacing between the adjustments, so one more fits on screen (Rob de Loe, 2026-11-09) */
+html.phone-land.simple body.tech #main-controls .row{margin-bottom:4px;row-gap:0}
+html.phone-land.simple body.tech #main-controls .row input[type=number]{padding-top:1px;padding-bottom:1px}
+html.phone-land.simple body.tech #main-controls .row input[type=range]{margin-top:0;margin-bottom:0}
+html.phone-land.simple body.tech #main-controls>*:not(.row){margin-top:0;margin-bottom:4px}
+html.phone-land.simple body.tech #adjsec>summary{margin-bottom:4px}
 html.phone-land body.tech .legrow .btn,html.phone-land body.tech .legrow .legtog{padding-top:3px;padding-bottom:3px}
 body.tech .hdr h1 .ib{display:none!important}
 .aboutbtn{display:none}
@@ -113,7 +119,7 @@ html.phone-land body.tech .hdrbtns{flex-wrap:nowrap}
 body.tech .row:has(>#n_view){display:none!important}
 .vwbar{position:absolute;z-index:4;display:flex;align-items:center;gap:8px;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--panel) 85%,transparent);border:1px solid var(--line);box-sizing:border-box;font-size:12px;color:var(--muted);font-weight:600}
 .vwbar .vws{flex:1 1 auto;display:flex;min-width:60px}
-.vwbar .vws input{width:100%;margin:0;pointer-events:auto}
+.vwbar .vws input{width:100%;margin:0;pointer-events:auto;accent-color:#6fb4c3;accent-color:color-mix(in srgb,var(--accent) 55%,#fff)} /* pale teal (Rob de Loe, 2026-11-09) */
 .vwbar{pointer-events:none;padding:1px 10px}.vwbar .ib{pointer-events:auto} /* only the slider (and its help bubble) takes clicks, so a handle under the bar's labels can still be dragged */
 .vwbar .vwl{white-space:nowrap}
 body:not(.tech) .vwbar{display:none}
@@ -293,7 +299,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="share-btn" class="helpbtn" hidden aria-haspopup="true" aria-expanded="false" aria-controls="share-pop">Save &amp; share ▾</button><div id="share-pop" class="sharepop" hidden role="group" aria-label="Save and share"></div><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button><button type="button" id="about-btn" class="helpbtn aboutbtn" data-tip="about">About</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.369</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.373</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -543,7 +549,7 @@ function syncFocus(fromSlider){
  {const nf=document.getElementById('n_focus');nf.step=imperial?'3':'1';nf.min='0';if(V.focus>100){nf.value='';nf.placeholder='∞ +'+pastInf(V.focus).toFixed(2)+' mm';}else if(isFinite(u)){nf.value=fmtD(u).replace(uL(),'');nf.placeholder='∞';}else{nf.value='';nf.placeholder='∞';}}
 }
 function setFocusDist(u){V.focus=distToPct(u);syncFocus();}
-let lastCrossSide=1,focusSide=0,lastFocusSide=1,tiltRawPrev=null,tiltDir=0,PENDING=[],view=null,TA=[],tiltAnchor=null,handles=[],drag=null,grabOff=[0,0];
+let VWTOP=false,CAMH=null,lastCrossSide=1,focusSide=0,lastFocusSide=1,tiltRawPrev=null,tiltDir=0,PENDING=[],view=null,TA=[],tiltAnchor=null,handles=[],drag=null,grabOff=[0,0];
 const DEFAULT_FOCUS_M=2; // inside the scene at every scene width (2 m and up)
 let CAMAUTO=false; // true when the technical camera was filled in for you (the chosen lens or digital camera leaves only one), so it does not narrow the lens list
 let DIGAUTO=false; // true when the digital camera was filled in for you (the chosen camera can use only one), so it does not narrow the camera list
@@ -1789,6 +1795,7 @@ function draw0(){
  TA=[];PENDING=[];
  if(LENS&&LENS.circAp&&CIRCAUTO!==null&&Math.abs(V.circ-CIRCAUTO)<1e-9){const c=circAt(LENS,V.ap);if(c!==CIRCAUTO){CIRCAUTO=c;setVal('circ',c);}} // the image circle follows the aperture
  if(hCapped()&&V.h>H_CAP)setVal('h',H_CAP); // a narrow side view: the camera can be lowered but not raised above 175 cm (see hCapped)
+ autoLowerCam();
  const READY=!TECH||!!(TCAM&&DIG!==null&&(LENS||LENSCUSTOM)); // the view shows only the camera until a technical camera, a digital camera and a lens are all chosen
  extLimits();
  model();
@@ -2165,9 +2172,10 @@ function draw0(){
   const xa=Math.min(...pts.map(p=>p[0]))-2,xb=Math.max(...pts.map(p=>p[0]))+2,ya=Math.min(...pts.map(p=>p[1]))-2,yb=Math.max(...pts.map(p=>p[1]))+2;
   obst.push({x:xa,y:ya,w:xb-xa,h:yb-ya});
   const top=lt1[1]<lt2[1]?lt1:lt2;
-  addLabel('Lens',top,['ac','ar','al'],{r:6,prio:0,color:fg,font:'13px system-ui,sans-serif'});}
+  if(!TECH)addLabel('Lens',top,['ac','ar','al'],{r:6,prio:0,color:fg,font:'13px system-ui,sans-serif'});} // Technical Camera: no 'Lens' label (Rob de Loe, 2026-11-09)
  {const xa=Math.min(...camPts.map(q=>q[0]))-3,xb=Math.max(...camPts.map(q=>q[0]))+3,ya=Math.min(...camPts.map(q=>q[1]))-3,yb=Math.max(...camPts.map(q=>q[1]))+3;
-  addLabel('Camera',[(xa+xb)/2,ya],['ac','al','ar'],{r:4,prio:5,color:muted,font:'13px system-ui,sans-serif'});}
+  addLabel('Camera',[(xa+xb)/2,ya],['ac','al','ar'],{r:4,prio:5,color:muted,font:'13px system-ui,sans-serif',sub:TECH&&!topView?(imperial?Math.round(V.h/2.54)+' in':Math.round(V.h)+' cm'):null,subFont:'11px system-ui,sans-serif'}); // Technical Camera: the camera height under the label
+  CAMH=TECH&&!topView?{px:(xa+xb)/2,py:(ya+yb)/2}:null;}
  // axes in the top view are drawn on the turned canvas: distance up the left edge, left/right along the bottom
  if(topView){
   sx.save();sx.setTransform(dpr,0,0,dpr,0,0);
@@ -2188,7 +2196,7 @@ function draw0(){
   for(let t=Math.ceil(y0/ps)*ps;t<y1;t+=ps){const y=PY(t);if(y<7||y>H-10)continue;sx.beginPath();sx.moveTo(aw-6,y);sx.lineTo(aw,y);sx.stroke();sx.fillText(topView?(Math.abs(Math.round(t*1000)/10)+(t>1e-9?' L':t<-1e-9?' R':'')):String(imperial?Math.round(t*FT*10)/10:+t.toFixed(2)),aw-9,y+4);}
   sx.save();sx.translate(11,H/2);sx.rotate(-Math.PI/2);sx.textAlign='center';sx.fillText(topView?'Left / Right (cm)':(imperial?'Height (ft)':'Height (m)'),0,0);sx.restore();}
  // drag handles
- handles=[];objH.forEach(h=>handles.push(h));
+ handles=[];objH.forEach(h=>handles.push(h));if(CAMH&&!LEARN)handles.push({id:'camh',px:CAMH.px,py:CAMH.py}); // Technical Camera: drag the camera up or down to set its height (Rob de Loe, 2026-11-09)
  {const edge=x1-0.04*(x1-x0);
   const g=topView?null:groundHit(),gp=(g!==null&&isFinite(g)&&g>x0+0.07*(x1-x0)&&g<edge)?[PX(g),PY(Gy(g))]:null;
   // focus dot: always on the plane of focus, at the point nearest an anchor. The anchor is wherever the dot was last dropped (or a default
@@ -2209,7 +2217,16 @@ function draw0(){
      if(!ok(at(sg)))sg=-sg;lastCrossSide=sg;q=at(sg);}
     else lastCrossSide=Math.sign(t2-tcx)||lastCrossSide;}
    return(q[0]>=76&&q[0]<=W-20&&q[1]>=16&&q[1]<=H-16)?q:null;};
-  const fp=(focusAnchor&&footOf(focusAnchor))||footOf(defAnchor);
+  let fp=(focusAnchor&&footOf(focusAnchor))||footOf(defAnchor),TPF=null;
+  /* Technical Camera (Rob de Loe, 2026-11-09): the red dot and the green diamond keep clear of the scene-width bar at the bottom of the diagram, with room for a
+     finger (26 px all round). BARX is the bar in the drawing's own coordinates (turned back for the top view); barIv gives the stretch of the plane of focus inside it. */
+  const mkBar=(m,top=VWTOP)=>{if(!TECH)return null;const vb=document.getElementById('vwbar');if(!vb||!vb.isConnected||!vb.offsetWidth)return null;const bw=vb.offsetWidth,bh=vb.offsetHeight;
+   const r=top?{x0:RW-8-bw-m,x1:RW-8+m,y0:6-m,y1:6+bh+m}:{x0:RW-8-bw-m,x1:RW-8+m,y0:RH-6-bh-m,y1:RH-6+m};return topView?{x0:RH-r.y1,x1:RH-r.y0,y0:r.x0,y1:r.x1}:r;},BAR1=mkBar(26),BAR2=mkBar(8); // BAR2: a tighter margin, used only when no spot clears BAR1
+  const barIv=(sA,ux,uy,BARX=BAR1)=>{if(!BARX)return null;let a=-Infinity,b=Infinity;for(const [c,u,mn,mx] of [[sA[0],ux,BARX.x0,BARX.x1],[sA[1],uy,BARX.y0,BARX.y1]]){if(Math.abs(u)<1e-9){if(c<mn||c>mx)return null;continue;}const p=(mn-c)/u,q=(mx-c)/u;a=Math.max(a,Math.min(p,q));b=Math.min(b,Math.max(p,q));}return a<=b?[a,b]:null;};
+  if(fp&&info.A){const ux=info.dx,uy=-info.dy,sA=[PX(info.A[0]),PY(info.A[1])],iv=barIv(sA,ux,uy);
+   const ok=z=>z[0]>=76&&z[0]<=W-20&&z[1]>=16&&z[1]<=H-16,t=(fp[0]-sA[0])*ux+(fp[1]-sA[1])*uy;
+   for(const v of [iv,barIv(sA,ux,uy,BAR2)]){if(!v||!(t>v[0]&&t<v[1]))break;
+    const c=[v[0]-1,v[1]+1].map(x=>[sA[0]+x*ux,sA[1]+x*uy]).filter(ok).sort((p,q)=>Math.hypot(p[0]-fp[0],p[1]-fp[1])-Math.hypot(q[0]-fp[0],q[1]-fp[1]));if(c.length){fp=c[0];break;}}}
   if(fp&&!hideHandles&&READY){sx.lineWidth=3;sx.strokeStyle=bg;sx.fillStyle=acc2;sx.beginPath();sx.arc(fp[0],fp[1],9,0,7);sx.fill();sx.stroke();}
   if(fp){handles.push({id:'focus',px:fp[0],py:fp[1]});TA.push({id:'focus',u:fp[0],v:fp[1],dx:20,dy:20});}
   const Zm=M.Zc<0?Infinity:M.Zc/1000;
@@ -2240,10 +2257,13 @@ function draw0(){
      t=t2;}
     let tcx=null; // and where the + that marks the focus distance lies along the plane
     if(isFinite(M.Zc)&&M.Zc>0){const cq=cw(0,M.Zc/1000);tcx=(PX(cq[0])-sA[0])*ux+(PY(cq[1])-sA[1])*uy;}
-    {const obs=[];if(th!==null&&isFinite(th))obs.push([th,30]);if(tcx!==null&&isFinite(tcx))obs.push([tcx,18]); // the diamond never sits on the hinge dot or on the +: dragged onto one, it jumps to the side the pointer is on, and to the far side once the pointer crosses over
+    {const obs=[];if(th!==null&&isFinite(th))obs.push([th,30]);if(tcx!==null&&isFinite(tcx))obs.push([tcx,18]);{const iv=barIv(sA,ux,uy);if(iv)obs.push([(iv[0]+iv[1])/2,(iv[1]-iv[0])/2]);} /* and never under the scene-width bar */ // the diamond never sits on the hinge dot or on the +: dragged onto one, it jumps to the side the pointer is on, and to the far side once the pointer crosses over
      const clear=x=>Math.abs(x-tf)>=43.9&&obs.every(([o,R])=>Math.abs(x-o)>=R-0.1);
      if(obs.length&&!clear(t)){const c=[tf-44,tf+44,...obs.flatMap(([o,R])=>[o-R,o+R])].map(x=>Math.min(hi,Math.max(lo,x))).filter(clear);
-      if(c.length)t=c.reduce((a,b)=>Math.abs(b-traw)<Math.abs(a-traw)?b:a);}}
+      if(c.length)t=c.reduce((a,b)=>Math.abs(b-traw)<Math.abs(a-traw)?b:a);
+      else{const iv2=barIv(sA,ux,uy,BAR2),ob2=obs.slice(0,obs.length-(barIv(sA,ux,uy)?1:0));if(iv2)ob2.push([(iv2[0]+iv2[1])/2,(iv2[1]-iv2[0])/2]); // no room: a tighter margin round the bar, and 30 px from the red dot
+       const clear2=x=>Math.abs(x-tf)>=29.9&&ob2.every(([o,R])=>Math.abs(x-o)>=R-0.1),c2=[tf-30,tf+30,...ob2.flatMap(([o,R])=>[o-R,o+R])].map(x=>Math.min(hi,Math.max(lo,x))).filter(clear2);
+       if(c2.length)t=c2.reduce((a,b)=>Math.abs(b-traw)<Math.abs(a-traw)?b:a);}}}
     tp=[sA[0]+t*ux,sA[1]+t*uy];
    }
    if(tp){
@@ -2251,7 +2271,11 @@ function draw0(){
     sx.moveTo(tp[0],tp[1]-12);sx.lineTo(tp[0]+12,tp[1]);sx.lineTo(tp[0],tp[1]+12);sx.lineTo(tp[0]-12,tp[1]);sx.closePath();sx.fill();sx.stroke();}
     handles.push({id:'tilt',px:tp[0],py:tp[1]});TA.push({id:'tilt',u:tp[0],v:tp[1],dx:22,dy:22});dot(tp,15);
    }
+   TPF=tp;
   }
+  { // in the rare scene where the plane of focus runs only along the bottom of the diagram, there is no room beside the bar: the bar then moves to the top
+   const inR=(p,R)=>!!(R&&p&&p[0]>R.x0&&p[0]<R.x1&&p[1]>R.y0&&p[1]<R.y1),hit=R=>inR(fp,R)||inR(TPF,R);
+   if(!VWTOP&&hit(mkBar(20,false))&&!hit(mkBar(26,true)))VWTOP=true;else if(VWTOP&&!hit(mkBar(26,false)))VWTOP=false;}
  }
  if(!READY){handles=handles.filter(h=>h.id!=='focus'&&h.id!=='tilt');TA=TA.filter(a=>a.id!=='focus'&&a.id!=='tilt');} // no red dot or green diamond until the camera setup is complete
  // results
@@ -2282,10 +2306,10 @@ function draw0(){
  if(!READY)PENDING=PENDING.filter(q=>!['plane','limits','lplane','caxis'].includes(q.id));
  // place every queued label at the first free spot around its marker, trying wider rings if needed
  {const placed=[],ALL=['ac','ar','al','rc','lc','br','bl','bc'];
-  const BW=topView?RW:W,BH=topView?RH:H,OB=topView?obst.map(o=>({x:o.y,y:W-o.x-o.w,w:o.h,h:o.w})):obst; // placed on the canvas itself, so text stays upright
+  const BW=topView?RW:W,BH=topView?RH:H,OB=(topView?obst.map(o=>({x:o.y,y:W-o.x-o.w,w:o.h,h:o.w})):obst).concat((()=>{const vb=TECH&&document.getElementById('vwbar');if(!vb||!vb.isConnected||!vb.offsetWidth)return[];const bw=vb.offsetWidth,bh=vb.offsetHeight;return[{x:RW-12-bw,y:(VWTOP?6:RH-6-bh)-4,w:bw+8,h:bh+8}];})()); // placed on the canvas itself, so text stays upright; labels also keep off the scene-width bar
   if(topView){sx.save();sx.setTransform(dpr,0,0,dpr,0,0);}
   labels.sort((a,b)=>a.prio-b.prio).forEach(L=>{
-   sx.font=L.font;const w=sx.measureText(L.text).width,h=16,[px,py]=topView?[L.p[1],W-L.p[0]]:L.p;
+   sx.font=L.font;const w0=sx.measureText(L.text).width;let ws=0;if(L.sub){sx.font=L.subFont;ws=sx.measureText(L.sub).width;sx.font=L.font;}const w=Math.max(w0,ws),h=L.sub?29:16,[px,py]=topView?[L.p[1],W-L.p[0]]:L.p; // a label may carry a second, smaller line (sub)
    const pos=(d,r)=>({ac:[px-w/2,py-r-h],ar:[px+r,py-r-h],al:[px-r-w,py-r-h],rc:[px+r,py-h/2],lc:[px-r-w,py-h/2],br:[px+r,py+r*0.5],bl:[px-r-w,py+r*0.5],bc:[px-w/2,py+r+2]})[d];
    const dirs=L.order.concat(ALL.filter(d=>!L.order.includes(d)));
    let best=null,bestScore=Infinity;
@@ -2297,8 +2321,9 @@ function draw0(){
     if(score<bestScore){bestScore=score;best=q;if(score===0)break search;}
    }
    placed.push(best);sx.textAlign='left';
-   sx.lineJoin='round';sx.lineWidth=3;sx.strokeStyle=bg;sx.strokeText(L.text,best.x,best.y+12); // halo so the text stays readable over lines
-   sx.fillStyle=L.color;sx.fillText(L.text,best.x,best.y+12);
+   {const bx=best.x+(w-w0)/2;sx.lineJoin='round';sx.lineWidth=3;sx.strokeStyle=bg;sx.strokeText(L.text,bx,best.y+12); // halo so the text stays readable over lines
+   sx.fillStyle=L.color;sx.fillText(L.text,bx,best.y+12);}
+   if(L.sub){sx.font=L.subFont;const bx=best.x+(w-ws)/2;sx.strokeText(L.sub,bx,best.y+25);sx.fillText(L.sub,bx,best.y+25);sx.font=L.font;}
   });
   if(topView)sx.restore();
  }
@@ -2338,6 +2363,8 @@ const toWorld=p=>[view.x0+p[0]/view.vw*(view.x1-view.x0),view.y1-p[1]/view.vh*(v
 // tol is in on-screen pixels: generous for a finger, tighter for a mouse
 function pick(p,tol){let best=null,bs=Infinity;for(const h of handles){const d=Math.hypot(h.px-p[0],h.py-p[1]);if(d>=tol)continue;const sc=d+(h.id[0]==='o'?8:0)+(h.rm?16:0);if(sc<bs){bs=sc;best=h;}}return best;} // a handle must be within tol; among those, object move dots count as a little nearer than they are, and the remove X as farther, so a close call goes to move
 function applyDrag(w){
+ if(drag==='camh'){const t=w[1]+grabOff[1],off=M.h-V.h/100;let v=Math.round((t-off)*100);v=Math.max(10,Math.min(hCapped()?H_CAP:1000,v));if(imperial)v=Math.round(Math.round(v/2.54)*2.54*10)/10;
+  if(v!==V.h){setVal('h',v);if(AUTOH.note&&Math.abs(v-AUTOH.h)>0.5){AUTOH.note=false;hLowNote();}}return;}
  if(drag==='focus'){
   // find the focus setting whose plane passes closest to the pointer (tilt unchanged), then remember the pointer as the dot's anchor
   w=[w[0]+grabOff[0],w[1]+grabOff[1]];
@@ -2694,8 +2721,8 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
  ab.addEventListener('click',e=>{e.stopPropagation();if(!tipEl.hidden&&tipFor===ab){hideTip();return;}showTip(ab);tipPinned=true;});
  const vb=document.createElement('div');vb.className='vwbar';vb.id='vwbar';vb.innerHTML='<span class="vwl" aria-hidden="true">◂ Narrower</span><span class="vws"></span><span class="vwl" aria-hidden="true">Wider ▸</span>';vb.appendChild(mkBubble('view_c','scene width'));
  if(rv)rv.setAttribute('aria-label','Scene width');
- window.placeVwBar=()=>{if(!TECH||vb.parentNode!==scenePan)return;const c=document.getElementById('scene');const w=Math.min(c.offsetWidth-24,Math.max(220,c.offsetWidth*0.62));
-  vb.style.width=w+'px';vb.style.left=(c.offsetLeft+(c.offsetWidth-w)/2)+'px';vb.style.top=(c.offsetTop+c.offsetHeight-vb.offsetHeight-6)+'px';};
+ window.placeVwBar=()=>{if(!TECH||vb.parentNode!==scenePan)return;const c=document.getElementById('scene');const w=Math.min(c.offsetWidth-64,Math.max(250,c.offsetWidth*0.55));
+  vb.style.width=w+'px';vb.style.left=(c.offsetLeft+c.offsetWidth-w-8)+'px'; /* right-aligned, clear of the height axis (Rob de Loe, 2026-11-09) */vb.style.top=(VWTOP?c.offsetTop+6:c.offsetTop+c.offsetHeight-vb.offsetHeight-6)+'px';};
  const placeHdr=()=>{hb.innerHTML=TECH?'?':'ⓘ Help';hb.setAttribute('aria-label','Help');hb.classList.toggle('qbtn',TECH);
   if(rv){if(TECH){if(rv.parentNode!==vb.querySelector('.vws')){vb.querySelector('.vws').appendChild(rv);}if(vb.parentNode!==scenePan)scenePan.insertBefore(vb,document.getElementById('sceneTips'));placeVwBar();}
    else if(rvHome&&rv.parentNode!==rvHome){rvHome.appendChild(rv);vb.remove();}}};
@@ -2722,10 +2749,27 @@ function wrapWith(el,id,what,inline){const w=document.createElement('div');w.cla
   const b=mkBubble(id,w+' (legend)');b.style.marginLeft='8px';sp.appendChild(b);});
 }
 // Notes: the short notes about the chosen camera, digital camera and lens collect behind one amber "!" icon beside each control name (they are still written to the hidden paragraphs, which this reads)
-const NOTE_GROUPS={camera:{label:'label[for="n_camera"]',what:'the technical camera',ids:['lens-acc','lens-acc2','lens-panel']},lens:{label:'label[for="n_lens"]',what:'the lens',ids:['lens-restr','lens-design','est-note']},dig:{label:'label[for="n_sensor"]',what:'the digital camera',ids:['dig-note']},combTilt:{label:'label[for="n_tilt"]',what:'tilt or swing',fn:()=>[COMBT.tilt,circTiltNote()].filter(Boolean).join('\n\n')},combRf:{label:'label[for="n_shift"]',what:'rise/fall or shift',fn:()=>[topView?'':COMBT.rf,bodyHit('a'),CLAMPN.a].filter(Boolean).join('\n\n')},closeRange:{label:'label[for="n_focus"]',what:'the focus distance',fn:()=>closeRangeNote()},hCap:{label:'label[for="n_h"]',what:'the camera height',fn:()=>hCapNote()},combRf2:{label:'label[for="n_shiftb"]',what:'rise/fall or shift',fn:()=>[topView?COMBT.rf:'',bodyHit('b'),CLAMPN.b].filter(Boolean).join('\n\n')}};
+const NOTE_GROUPS={camera:{label:'label[for="n_camera"]',what:'the technical camera',ids:['lens-acc','lens-acc2','lens-panel']},lens:{label:'label[for="n_lens"]',what:'the lens',ids:['lens-restr','lens-design','est-note']},dig:{label:'label[for="n_sensor"]',what:'the digital camera',ids:['dig-note']},combTilt:{label:'label[for="n_tilt"]',what:'tilt or swing',fn:()=>[COMBT.tilt,circTiltNote()].filter(Boolean).join('\n\n')},combRf:{label:'label[for="n_shift"]',what:'rise/fall or shift',fn:()=>[topView?'':COMBT.rf,bodyHit('a'),CLAMPN.a].filter(Boolean).join('\n\n')},closeRange:{label:'label[for="n_focus"]',what:'the focus distance',fn:()=>closeRangeNote()},hCap:{label:'label[for="n_h"]',what:'the camera height',fn:()=>[hCapNote(),AUTOH.note?H_LOW_TXT:''].filter(Boolean).join('\n\n')},combRf2:{label:'label[for="n_shiftb"]',what:'rise/fall or shift',fn:()=>[topView?COMBT.rf:'',bodyHit('b'),CLAMPN.b].filter(Boolean).join('\n\n')}};
 // camera height in a narrow side view: below a scene width of 4.6 m (15 ft) the camera at 175 cm no longer fits a pane of the usual shape, so the pane grows
 // taller (see draw0) and the camera height is limited to 175 cm, so the pane does not become very tall; less is shown below the ground, down to 0.5 m
 const H_CAP=175,hCut=()=>imperial?15/FT:4.6,hCapped=()=>!topView&&V.view<hCut()-1e-9;
+/* Phone held sideways (Rob de Loe, 2026-11-09): in a narrow side view the pane grows taller as the camera is raised (the scales across and up stay equal), and on a
+   sideways phone it soon outgrows the screen. So when the scene width changes, the camera is lowered, if need be, to the height at which the pane keeps its size,
+   and a note says so. The camera can be raised again (in Setup or by dragging it in the diagram); the pane then grows and the view scrolls. */
+const AUTOH={view:null,plh:null,h:null,note:false};
+function autoLowerCam(){
+ const pl=TECH&&!topView&&document.documentElement.classList.contains('phone-land')&&PL_H>0;
+ if(!pl){AUTOH.view=null;AUTOH.note=false;hLowNote();return;}
+ if(AUTOH.note&&Math.abs(V.h-AUTOH.h)>0.5){AUTOH.note=false;} // the user has moved the camera since
+ if(AUTOH.view===V.view&&AUTOH.plh===PL_H){hLowNote();return;}
+ AUTOH.view=V.view;AUTOH.plh=PL_H;
+ if(!(V.view<hCut()-1e-9)){hLowNote();return;} // wider scenes keep the pane's size by showing more width instead
+ const W=Math.max(200,Math.round(sc.getBoundingClientRect().width)||960),lf=Math.max(0.18/1.12,122/W),xr0=1.13*V.view/(1-lf),H0=Math.max(PL_HMIN,Math.min(Math.round(W*0.62),PL_H));
+ const off=(M&&isFinite(M.h)?M.h-V.h/100:0),fit=Math.max(10,Math.floor(((xr0*H0/W)-1.2-off)*100)); // the lens may sit up to (pane height in metres) - 1.2 m above the ground
+ if(V.h>fit+0.5){setVal('h',fit);AUTOH.h=fit;AUTOH.note=true;toast('Camera height lowered to preserve display height.');}
+ hLowNote();}
+const H_LOW_TXT='Camera height lowered to preserve display height. Raising the camera again requires scrolling the scene.';
+function hLowNote(){} // the note is the '!' bubble beside Camera height from ground (NOTE_GROUPS.hCap), refreshed after each drawing
 function hCapNote(){return hCapped()&&V.h>=H_CAP-1e-9?(imperial?'With a scene width under 15 ft, the camera cannot be raised above 69 in.':'With a scene width under 4.6 m, the camera cannot be raised above 175 cm.'):'';}
 function closeRangeNote(){ // nearer than about 20 focal lengths (magnification above about 1:20), the thin-lens figures start to drift: principal planes, pupil magnification and lens corrections matter (see the Technical Summary)
  if(!TECH||!(LENS||LENSCUSTOM)||!(V.focus<=100))return '';const u=pctToDist(V.focus);return isFinite(u)&&u<20*V.fl/1000?'At close range (starting at 20 x focal length) distances and depth of field become approximate.':'';}
