@@ -308,7 +308,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="share-btn" class="helpbtn" hidden aria-haspopup="true" aria-expanded="false" aria-controls="share-pop">Save &amp; share ▾</button><div id="share-pop" class="sharepop" hidden role="group" aria-label="Save and share"></div><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button><button type="button" id="about-btn" class="helpbtn aboutbtn" data-tip="about">About</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.383</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.384</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -2042,26 +2042,33 @@ function draw0(){
    sx.globalAlpha=1;sx.lineWidth=1;sx.strokeStyle=ol;}
     // a small grip on every placed element shows that it can be dragged
   objH=[];
+  /* Technical Camera: no handle or X for an object may sit under the scene-width bar (Rob de Loe, 2026-11-09). onBar: is a drawing point within m px of the bar;
+     offBar: the point moved just clear of it, straight up (or down when the bar is at the top). In the top view the drawing is turned, so the point is turned to the screen and back. */
+  const scrOf=(x,y)=>topView?[y,RH-x]:[x,y],drwOf=(X,Y)=>topView?[RH-Y,X]:[X,Y];
+  const barRect=m=>{if(!TECH)return null;const vb=document.getElementById('vwbar');if(!vb||!vb.isConnected||!vb.offsetWidth)return null;const bw=vb.offsetWidth,bh=vb.offsetHeight,y0=VWTOP?6:RH-6-bh;return{x0:RW-8-bw-m,x1:RW-8+m,y0:y0-m,y1:y0+bh+m};};
+  const onBar=(x,y,m)=>{const r=barRect(m);if(!r)return false;const [X,Y]=scrOf(x,y);return X>r.x0&&X<r.x1&&Y>r.y0&&Y<r.y1;};
+  const offBar=(x,y,m)=>{const r=barRect(m);if(!r)return [x,y];const [X,Y]=scrOf(x,y);if(!(X>r.x0&&X<r.x1&&Y>r.y0&&Y<r.y1))return [x,y];return drwOf(X,VWTOP?r.y1:r.y0);};
+  const BARM=COARSE?10:6; // the clear space kept round the bar, beyond the handle's own size
   const arrows=(X,Y)=>{sx.strokeStyle='#fff';sx.lineWidth=1.5;sx.beginPath();[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{sx.moveTo(X,Y);sx.lineTo(X+a*5,Y+b*5);sx.moveTo(X+a*5,Y+b*5);sx.lineTo(X+a*3.2-b*1.8,Y+b*3.2+a*1.8);sx.moveTo(X+a*5,Y+b*5);sx.lineTo(X+a*3.2+b*1.8,Y+b*3.2-a*1.8);});sx.stroke();}; // move arrows
   const turn=(X,Y)=>{sx.strokeStyle='#fff';sx.lineWidth=1.5;sx.beginPath();sx.arc(X,Y,3.6,0.4,0.4+4.9);sx.stroke();sx.beginPath();const ex=X+3.6*Math.cos(0.4),ey=Y+3.6*Math.sin(0.4);sx.moveTo(ex,ey);sx.lineTo(ex+3,ey-1.2);sx.moveTo(ex,ey);sx.lineTo(ex+0.6,ey-3.3);sx.stroke();}; // turn arrow
   const clx=(v,a,b)=>Math.max(a,Math.min(b,v)),GMIN=topView?[44,70]:[66,16],clampH=(px,py)=>[clx(px,GMIN[0],W-16),clx(py,GMIN[1],H-16)]; // a handle whose object is partly or wholly out of view is kept inside the view (clear of the axes) so it can still be used
-  const grip=(id,x,y,r,icon)=>{const c=clampH(PX(x),PY(y));objH.push({id,px:c[0],py:c[1],tw:[x,y]}); // tw: where the element really is, so dragging does not make it jump
+  const grip=(id,x,y,r,icon)=>{const c=offBar(...clampH(PX(x),PY(y)),r+BARM);objH.push({id,px:c[0],py:c[1],tw:[x,y]}); // tw: where the element really is, so dragging does not make it jump
    if(!hideHandles){sx.globalAlpha=1;sx.lineWidth=2;sx.strokeStyle='#fff';sx.fillStyle='rgba(30,40,30,0.8)';sx.beginPath();sx.arc(c[0],c[1],r,0,7);sx.fill();sx.stroke();if(icon)icon(c[0],c[1]);sx.lineWidth=1;sx.strokeStyle=ol;}};
   if(topView)TOP.forEach((o,i)=>{
    if(o.k==='wall'){grip('o'+i+'a',o.a[0],o.a[1],4.5);grip('o'+i+'b',o.b[0],o.b[1],4.5);grip('o'+i+'m',(o.a[0]+o.b[0])/2,(o.a[1]+o.b[1])/2,8,arrows);}
    else if(o.k==='building'){grip('o'+i,o.x,o.y,8,arrows);const t=LT(o,-12.5,0);grip('o'+i+'r',t[0],t[1],8,turn);}
    else grip('o'+i,o.x,o.y,4.5);});
   // a small X on every placed object (on the first element of a group) removes it
-  const XR=COARSE?12:7,xbtn=(X,Y,rm)=>{X=clx(X,GMIN[0]-8,W-XR-4);Y=clx(Y,GMIN[1]-8,H-XR-4);objH.push({id:'x'+objH.length,px:X,py:Y,rm});
+  const XR=COARSE?12:7,xbtn=(X,Y,rm,alt)=>{X=clx(X,GMIN[0]-8,W-XR-4);Y=clx(Y,GMIN[1]-8,H-XR-4);if(onBar(X,Y,XR+BARM)){const ok=(alt||[]).map(([a,b])=>[clx(a,GMIN[0]-8,W-XR-4),clx(b,GMIN[1]-8,H-XR-4)]).find(([a,b])=>!onBar(a,b,XR+BARM));[X,Y]=ok||offBar(X,Y,XR+BARM);} /* under the bar: beside its move dot instead, or else just clear of the bar */objH.push({id:'x'+objH.length,px:X,py:Y,rm});
    if(!hideHandles){sx.globalAlpha=1;sx.lineWidth=2;sx.strokeStyle='#fff';sx.fillStyle='rgba(150,35,35,0.92)';sx.beginPath();sx.arc(X,Y,XR,0,7);sx.fill();sx.stroke();
     const e=XR*0.4;sx.lineWidth=COARSE?2.4:1.8;sx.beginPath();sx.moveTo(X-e,Y-e);sx.lineTo(X+e,Y+e);sx.moveTo(X+e,Y-e);sx.lineTo(X-e,Y+e);sx.stroke();sx.lineWidth=1;sx.strokeStyle=ol;}};
-  if(topView){const seen=new Set();TOP.forEach(o=>{const key=o.g+'#'+(o.n||0);if(seen.has(key))return;seen.add(key);const q=o.k==='wall'?[(o.a[0]+o.b[0])/2,(o.a[1]+o.b[1])/2]:[o.x,o.y],st=((seen.size-1)%2)*(2*XR+4),ac=clampH(PX(q[0]),PY(q[1]));xbtn(ac[0]+(COARSE?32:18),ac[1]-(COARSE?32:18)-st,()=>{TOP=TOP.filter(t=>!(t.g===o.g&&(t.n||0)===(o.n||0)));});});}
+  if(topView){const seen=new Set();TOP.forEach(o=>{const key=o.g+'#'+(o.n||0);if(seen.has(key))return;seen.add(key);const q=o.k==='wall'?[(o.a[0]+o.b[0])/2,(o.a[1]+o.b[1])/2]:[o.x,o.y],st=((seen.size-1)%2)*(2*XR+4),ac=clampH(PX(q[0]),PY(q[1]));{const d=COARSE?32:18;xbtn(ac[0]+d,ac[1]-d-st,()=>{TOP=TOP.filter(t=>!(t.g===o.g&&(t.n||0)===(o.n||0)));},[[ac[0]-d,ac[1]-d-st],[ac[0]+d,ac[1]+d+st],[ac[0]-d,ac[1]+d+st]]);}});}
   if(!topView)SIDE.forEach((o,i)=>{ // the move dot sits at the foot of the object; if the object runs past the edge of the view it moves to the middle of the part that is in view
-   const hw=sideHW(o.t),a=Math.max(PX(o.x-hw),GMIN[0]),b=Math.min(PX(o.x+hw),W-16),cx0=PX(o.x),hx=(cx0>=a&&cx0<=b)?cx0:(a<b?(a+b)/2:clx(cx0,GMIN[0],W-16)),hy=clx(PY(Gy(o.x))-12,GMIN[1],H-16);
+   const hw=sideHW(o.t),a=Math.max(PX(o.x-hw),GMIN[0]),b=Math.min(PX(o.x+hw),W-16),cx0=PX(o.x),hx=(cx0>=a&&cx0<=b)?cx0:(a<b?(a+b)/2:clx(cx0,GMIN[0],W-16)),hy=offBar(hx,clx(PY(Gy(o.x))-12,GMIN[1],H-16),4.5+BARM)[1];
    if(o.fx)return; // fixed objects have no move dot and no X
    objH.push({id:'s'+i,px:hx,py:hy,tw:[o.x,0]});
    if(!hideHandles){sx.globalAlpha=1;sx.lineWidth=2;sx.strokeStyle='#fff';sx.fillStyle='rgba(30,40,30,0.8)';sx.beginPath();sx.arc(hx,hy,4.5,0,7);sx.fill();sx.stroke();sx.lineWidth=1;sx.strokeStyle=ol;}
-   xbtn(hx,hy+12+(COARSE?44:38)+(i%2)*(COARSE?28:22),()=>{const k=SIDE.indexOf(o);if(k>=0)SIDE.splice(k,1);});});
+   xbtn(hx,hy+12+(COARSE?44:38)+(i%2)*(COARSE?28:22),()=>{const k=SIDE.indexOf(o);if(k>=0)SIDE.splice(k,1);},[[hx+XR+14,hy],[hx-XR-14,hy],[hx,hy-XR-22]]);});
  }
  // axis ticks
  const gy=topView?H-28:PY(0); // the distance axis sits on the ground line in the side view and along the bottom edge from above
@@ -2295,7 +2302,7 @@ function draw0(){
   }
   { // in the rare scene where the plane of focus runs only along the bottom of the diagram, there is no room beside the bar: the bar then moves to the top
    const inR=(p,R)=>!!(R&&p&&p[0]>R.x0&&p[0]<R.x1&&p[1]>R.y0&&p[1]<R.y1),hit=R=>inR(fp,R)||inR(TPF,R);
-   if(!VWTOP&&hit(mkBar(20,false))&&!hit(mkBar(26,true)))VWTOP=true;else if(VWTOP&&!hit(mkBar(26,false)))VWTOP=false;}
+   const was=VWTOP;if(!VWTOP&&hit(mkBar(20,false))&&!hit(mkBar(26,true)))VWTOP=true;else if(VWTOP&&!hit(mkBar(26,false)))VWTOP=false;if(VWTOP!==was)requestAnimationFrame(()=>draw());} // the object handles were placed for the bar's old spot
  }
  if(!READY){handles=handles.filter(h=>h.id!=='focus'&&h.id!=='tilt');TA=TA.filter(a=>a.id!=='focus'&&a.id!=='tilt');} // no red dot or green diamond until the camera setup is complete
  // results
@@ -2870,6 +2877,8 @@ function placeSceneTips(){
   const a=TA.find(x=>x.id===b.dataset.tip);if(!a){b.style.display='none';return;}
   let rx,ry;if(a.real){rx=a.u;ry=a.v;}else if(view.top){rx=a.v;ry=view.H-a.u;}else{rx=a.u;ry=a.v;}
   rx=Math.min(view.W-14,Math.max(14,rx+(a.dx||0)));ry=Math.min(view.H-14,Math.max(14,ry+(a.dy||0)));
+  {const vb=TECH&&document.getElementById('vwbar');if(vb&&vb.isConnected&&vb.offsetWidth){const x0=(vb.offsetLeft-sc.offsetLeft)/k-16,x1=x0+vb.offsetWidth/k+32,y0=(vb.offsetTop-sc.offsetTop)/k-16,y1=y0+vb.offsetHeight/k+32; // a help bubble never sits on the scene-width bar (Rob de Loe, 2026-11-09)
+   if(rx>x0&&rx<x1&&ry>y0&&ry<y1)ry=VWTOP?y1:y0;}}
   b.style.display='';b.style.left=(sc.offsetLeft+rx*k)+'px';b.style.top=(sc.offsetTop+ry*k)+'px';});
 }
 function setHelp(on){helpOn=on;document.body.classList.toggle('help',on);if(window.placeResets)setTimeout(placeResets,0);const hb=document.getElementById('help-btn');hb.setAttribute('aria-pressed',on?'true':'false');if(!on)hideTip();placeSceneTips();}
