@@ -20,6 +20,8 @@ body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 "Atkinson Hype
 .hdrbtns{display:flex;align-items:center;gap:10px;flex:0 1 auto;flex-wrap:wrap}
 .lrnread{display:flex;flex-wrap:nowrap;white-space:nowrap;justify-content:flex-end;gap:0 3.5vw;font-size:min(calc(13px + 1pt),3.5vw);color:#000;margin:8px 4px 0}
 .lrnread:empty{display:none}
+body.tech .lrnread{color:var(--fg)} /* TechCam: the readings under the diagram follow the theme; they were black on dark grey in dark mode (iPhone report, 2026-11-11) */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body.tech .viewsw button.on{color:#0b1a24}}:root[data-theme="dark"] body.tech .viewsw button.on{color:#0b1a24} /* dark text on the light blue of a chosen switch in dark mode (white was 2.1:1) */
 .legtog{display:none;align-items:center;gap:8px;width:100%;margin:10px 0 0;padding:9px 12px;font:inherit;font-weight:600;font-size:14px;color:var(--accent);background:var(--ctl);border:1px solid var(--accent);border-radius:8px;cursor:pointer;text-align:left}
 .legtog .chev{display:inline-block;width:1em;font-size:15px}
 @media(max-width:880px){.legtog{display:flex}.panel.legoff .legend,.panel.legoff .readoutw{display:none}}
@@ -308,7 +310,7 @@ input[type=range]{touch-action:pan-y} /* a vertical swipe over a slider scrolls 
 <div class="wrap">
  <main>
   <div class="hdr"><h1>TechCam Tilt-Shift Calculator</h1><div class="hdrbtns"><button type="button" id="fs-btn" class="helpbtn" hidden title="Use the whole screen (hides the browser bar)">Full screen</button><button type="button" id="share-btn" class="helpbtn" hidden aria-haspopup="true" aria-expanded="false" aria-controls="share-pop">Save &amp; share ▾</button><div id="share-pop" class="sharepop" hidden role="group" aria-label="Save and share"></div><button type="button" id="help-btn" class="helpbtn" aria-pressed="false" title="Show or hide the information bubbles">ⓘ Help</button><button type="button" id="about-btn" class="helpbtn aboutbtn" data-tip="about">About</button></div></div>
-  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-09 v0.384</p>
+  <p class="devnote">Created by Rob de Loë | Draft 2026-Nov-11 v0.386</p>
   <div class="panel">
    <canvas id="scene" width="960" height="540" aria-label="Side view of the plane of focus"></canvas><div id="sceneTips"></div>
    <div id="lrn-read" class="lrnread" aria-live="polite"></div>
@@ -1803,6 +1805,8 @@ function draw(){sx=SX0;try{return draw0();}finally{sx=SX0;try{startBubble();lock
    Show legend row stay on screen. It used to keep its shape and shrink in width, but the pane never gets shorter than 220 px, so on a real phone it
    shrank to a narrow strip. PL_H is the tallest the pane may be (0 = no limit); the scales across and up stay equal, so a shorter pane shows less height. */
 let PL_H=0;const PL_HMIN=150;
+// Sideways phones, side view (Technical Camera): a narrower height axis (38 px, not 52) and the lens nearer the left edge, for more scene (Rob de Loe, 2026-11-11)
+const axSlim=()=>TECH&&!topView&&document.documentElement.classList.contains('phone-land'),axW=()=>axSlim()?38:52,lfOf=W=>Math.max(0.18/1.12,(axSlim()?86:122)/W);
 function fitScene(){if(fitScene.busy)return;const pl=document.documentElement.classList.contains('phone-land');
  const redraw=()=>{fitScene.busy=true;try{draw();}finally{fitScene.busy=false;}};
  if(!pl){if(sc.style.width||PL_H){sc.style.width='';PL_H=0;redraw();}return;}
@@ -1828,7 +1832,7 @@ function draw0(){
  const W=topView?RHt:RW;
  // horizontal and vertical scales are equal, so the pane height follows from the width shown and the height range
  // (300 cm below ground to 530 cm above; taller only when the lens itself is higher than about 4 m)
- const lf=Math.max(0.18/1.12,122/W); // share of the width to the left of the lens
+ const lf=lfOf(W); // share of the width to the left of the lens
  const yrMin=topView?5:M.h*1.25+3,yrN=Math.max(8.3,yrMin),xr0=1.13*V.view/(1-lf);
  // like the top view, the side view keeps a fixed pane shape; the scene width only zooms in or out (the height range grows and shrinks with it)
  // Above the cut-off scene width (hCut) the scene widens, if need be, so that the lens (plus room for its label) fits above the ground line; that only happens
@@ -1859,7 +1863,7 @@ function draw0(){
  const labels=[],obst=[];
  const ov=(a,b)=>{const w=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),h=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);return w>0&&h>0?w*h:0;};
  const dot=(p,r)=>obst.push({x:p[0]-r,y:p[1]-r,w:2*r,h:2*r});
- const addLabel=(text,p,order,o)=>{if((topView?p[0]<-20:p[0]<62)||p[0]>W+20||p[1]<-20||p[1]>H+20)return;labels.push(Object.assign({text,p,order,r:14,prio:1,color:acc2,font:'600 13px system-ui,sans-serif'},o||{}));};
+ const addLabel=(text,p,order,o)=>{if((topView?p[0]<-20:p[0]<axW()+10)||p[0]>W+20||p[1]<-20||p[1]>H+20)return;labels.push(Object.assign({text,p,order,r:14,prio:1,color:acc2,font:'600 13px system-ui,sans-serif'},o||{}));};
  sx.clearRect(0,0,RW,RH);sx.fillStyle=bg;sx.fillRect(0,0,RW,RH);
  if(topView)sx.setTransform(0,-dpr,dpr,0,0,RH*dpr); // (u,v) in the unturned layout -> (v, RH-u) on the canvas
  // heat map of blur
@@ -2051,7 +2055,7 @@ function draw0(){
   const BARM=COARSE?10:6; // the clear space kept round the bar, beyond the handle's own size
   const arrows=(X,Y)=>{sx.strokeStyle='#fff';sx.lineWidth=1.5;sx.beginPath();[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{sx.moveTo(X,Y);sx.lineTo(X+a*5,Y+b*5);sx.moveTo(X+a*5,Y+b*5);sx.lineTo(X+a*3.2-b*1.8,Y+b*3.2+a*1.8);sx.moveTo(X+a*5,Y+b*5);sx.lineTo(X+a*3.2+b*1.8,Y+b*3.2-a*1.8);});sx.stroke();}; // move arrows
   const turn=(X,Y)=>{sx.strokeStyle='#fff';sx.lineWidth=1.5;sx.beginPath();sx.arc(X,Y,3.6,0.4,0.4+4.9);sx.stroke();sx.beginPath();const ex=X+3.6*Math.cos(0.4),ey=Y+3.6*Math.sin(0.4);sx.moveTo(ex,ey);sx.lineTo(ex+3,ey-1.2);sx.moveTo(ex,ey);sx.lineTo(ex+0.6,ey-3.3);sx.stroke();}; // turn arrow
-  const clx=(v,a,b)=>Math.max(a,Math.min(b,v)),GMIN=topView?[44,70]:[66,16],clampH=(px,py)=>[clx(px,GMIN[0],W-16),clx(py,GMIN[1],H-16)]; // a handle whose object is partly or wholly out of view is kept inside the view (clear of the axes) so it can still be used
+  const clx=(v,a,b)=>Math.max(a,Math.min(b,v)),GMIN=topView?[44,70]:[axW()+14,16],clampH=(px,py)=>[clx(px,GMIN[0],W-16),clx(py,GMIN[1],H-16)]; // a handle whose object is partly or wholly out of view is kept inside the view (clear of the axes) so it can still be used
   const grip=(id,x,y,r,icon)=>{const c=offBar(...clampH(PX(x),PY(y)),r+BARM);objH.push({id,px:c[0],py:c[1],tw:[x,y]}); // tw: where the element really is, so dragging does not make it jump
    if(!hideHandles){sx.globalAlpha=1;sx.lineWidth=2;sx.strokeStyle='#fff';sx.fillStyle='rgba(30,40,30,0.8)';sx.beginPath();sx.arc(c[0],c[1],r,0,7);sx.fill();sx.stroke();if(icon)icon(c[0],c[1]);sx.lineWidth=1;sx.strokeStyle=ol;}};
   if(topView)TOP.forEach((o,i)=>{
@@ -2068,14 +2072,14 @@ function draw0(){
    if(o.fx)return; // fixed objects have no move dot and no X
    objH.push({id:'s'+i,px:hx,py:hy,tw:[o.x,0]});
    if(!hideHandles){sx.globalAlpha=1;sx.lineWidth=2;sx.strokeStyle='#fff';sx.fillStyle='rgba(30,40,30,0.8)';sx.beginPath();sx.arc(hx,hy,4.5,0,7);sx.fill();sx.stroke();sx.lineWidth=1;sx.strokeStyle=ol;}
-   xbtn(hx,hy+12+(COARSE?44:38)+(i%2)*(COARSE?28:22),()=>{const k=SIDE.indexOf(o);if(k>=0)SIDE.splice(k,1);},[[hx+XR+14,hy],[hx-XR-14,hy],[hx,hy-XR-22]]);});
+   xbtn(hx,hy+12+(COARSE?44:38)+(i%2)*(COARSE?28:22),()=>{const k=SIDE.indexOf(o);if(k>=0)SIDE.splice(k,1);},(()=>{const br=!VWTOP&&barRect(XR+BARM),gy=hy+12,ya=br?br.y0-1:null;const yb=ya!==null&&i%2?ya-(COARSE?28:22):null;return (yb!==null&&yb>gy+XR+3?[[hx,yb]]:[]).concat(ya!==null&&ya>gy+XR+3?[[hx,ya]]:[]).concat([[hx+XR+14,hy],[hx-XR-14,hy],[hx,hy-XR-22]]);})());}); /* first choice when the bar is in the way: still below the ground, just above the bar (Rob de Loe, 2026-11-09) */
  }
  // axis ticks
  const gy=topView?H-28:PY(0); // the distance axis sits on the ground line in the side view and along the bottom edge from above
  const step=tickStep(x1-x0,8);sx.fillStyle=muted;sx.font='13px system-ui,sans-serif';sx.textAlign='center';
- if(!topView)for(let t=Math.ceil(x0/step)*step;t<x1;t+=step){if(PX(t)<68)continue;sx.fillRect(PX(t),gy+3,1,6);sx.fillText(tickLbl(t),PX(t),gy+24);}
+ if(!topView)for(let t=Math.ceil(x0/step)*step;t<x1;t+=step){if(PX(t)<axW()+16)continue;sx.fillRect(PX(t),gy+3,1,6);sx.fillText(tickLbl(t),PX(t),gy+24);}
  // hyperfocal distance marker, just under the ground line on the distance axis
- if(READY&&!LEARN&&!noHyp&&!topView&&Math.abs(+V.tilt)<1e-9&&isFinite(hyperM())){const hx=hyperM()*M.cp;if(hx>x0&&hx<x1&&PX(hx)>68){const q=PX(hx),y=gy+4;TA.push({id:'hyper',u:q,v:y,dx:18,dy:12});sx.fillStyle=css('--hyper');sx.beginPath();sx.moveTo(q,y);sx.lineTo(q-6,y+11);sx.lineTo(q+6,y+11);sx.closePath();sx.fill();}}
+ if(READY&&!LEARN&&!noHyp&&!topView&&Math.abs(+V.tilt)<1e-9&&isFinite(hyperM())){const hx=hyperM()*M.cp;if(hx>x0&&hx<x1&&PX(hx)>axW()+16){const q=PX(hx),y=gy+4;TA.push({id:'hyper',u:q,v:y,dx:18,dy:12});sx.fillStyle=css('--hyper');sx.beginPath();sx.moveTo(q,y);sx.lineTo(q-6,y+11);sx.lineTo(q+6,y+11);sx.closePath();sx.fill();}}
  // field of view
  TA.push({id:'cam',u:PX(0),v:PY(M.h),dx:-44,dy:24});
  if(READY){const fx=[1,-1];for(const s3 of fx){const Xs=s3*M.S/2-M.shift,len=Math.hypot(Xs,M.j);let ok=false;for(let f=1.2;f>0.1&&!ok;f-=0.05){const t=(x1-x0)*f,[wx,wy]=cw(-Xs/len*t,M.j/len*t);if(wx>x0+(x1-x0)*0.3&&wx<x1-(x1-x0)*0.08&&wy>y0+(y1-y0)*0.1&&wy<y1-(y1-y0)*0.1){TA.push({id:'fov',u:PX(wx),v:PY(wy),dx:0,dy:0});ok=true;}}if(ok)break;}}
@@ -2088,7 +2092,7 @@ function draw0(){
  if(READY){const far=(x1-x0)*40,a=cw(0,-far),b=cw(0,far);
   sx.save();sx.setLineDash([7,3,1.5,3]);sx.lineCap='round';sx.strokeStyle=muted;sx.globalAlpha=0.7;sx.lineWidth=1.3;sx.beginPath();sx.moveTo(PX(a[0]),PY(a[1]));sx.lineTo(PX(b[0]),PY(b[1]));sx.stroke();sx.restore();
   {const hh=Math.hypot(b[0],b[1]-M.h),lp=linePick([0,M.h],[b[0]/hh,(b[1]-M.h)/hh],'x');if(lp)PENDING.push({id:'caxis',lp,frac:0.3});}
-  if(isFinite(M.Zc)&&M.Zc>0){const q=cw(0,M.Zc/1000),qx=PX(q[0]),qy=PY(q[1]);if(qx>70&&qx<W-6&&qy>6&&qy<H-6){sx.save();sx.setLineDash([]);sx.lineCap='round';for(const [col,lw] of[['rgba(255,255,255,0.9)',4.5],[acc2,1.8]]){sx.strokeStyle=col;sx.lineWidth=lw;sx.beginPath();sx.moveTo(qx-5.5,qy);sx.lineTo(qx+5.5,qy);sx.moveTo(qx,qy-5.5);sx.lineTo(qx,qy+5.5);sx.stroke();}sx.restore();}}}
+  if(isFinite(M.Zc)&&M.Zc>0){const q=cw(0,M.Zc/1000),qx=PX(q[0]),qy=PY(q[1]);if(qx>axW()+18&&qx<W-6&&qy>6&&qy<H-6){sx.save();sx.setLineDash([]);sx.lineCap='round';for(const [col,lw] of[['rgba(255,255,255,0.9)',4.5],[acc2,1.8]]){sx.strokeStyle=col;sx.lineWidth=lw;sx.beginPath();sx.moveTo(qx-5.5,qy);sx.lineTo(qx+5.5,qy);sx.moveTo(qx,qy-5.5);sx.lineTo(qx,qy+5.5);sx.stroke();}sx.restore();}}}
  if(Math.abs(+V.tilt)>=1e-9){const far=(x1-x0)*40,a=cw(-M.st*far,-M.ct*far),b=cw(M.st*far,M.ct*far);
   sx.save();sx.setLineDash([1.5,4]);sx.lineCap='round';sx.strokeStyle=muted;sx.globalAlpha=0.6;sx.lineWidth=1.3;sx.beginPath();sx.moveTo(PX(a[0]),PY(a[1]));sx.lineTo(PX(b[0]),PY(b[1]));sx.stroke();sx.restore();{const hh=Math.hypot(b[0],b[1]-M.h),lp=linePick([0,M.h],[b[0]/hh,(b[1]-M.h)/hh],'x');if(lp)PENDING.push({id:'laxis',lp,frac:0.15});}}
  if(!READY)sx=NOP; // until a technical camera, a digital camera and a lens are all chosen, the plane of focus, its limits and the field curvature are not drawn
@@ -2216,12 +2220,12 @@ function draw0(){
   if(READY&&!noHyp&&Math.abs(+V.tilt)<1e-9&&isFinite(hyperM())){const hx=hyperM()*M.cp;if(hx>x0&&hx<x1){const y=RH-PX(hx);if(y>8&&y<RH-bh-8){TA.push({id:'hyper',u:aw+34,v:y,real:1});sx.fillStyle=css('--hyper');sx.beginPath();sx.moveTo(aw+4,y);sx.lineTo(aw+15,y-6);sx.lineTo(aw+15,y+6);sx.closePath();sx.fill();}}}
   sx.restore();
  }else
- {const ps=tickStep(y1-y0,11),aw=52;
+ {const ps=tickStep(y1-y0,11),aw=axW(),sl=aw<52,tk=sl?4:6,tg=sl?6:9;
   sx.globalAlpha=0.92;sx.fillStyle=bg;sx.fillRect(0,0,aw,H);sx.globalAlpha=1;
   sx.strokeStyle=muted;sx.lineWidth=1;sx.beginPath();sx.moveTo(aw,0);sx.lineTo(aw,H);sx.stroke();
-  sx.fillStyle=muted;sx.font='12px system-ui,sans-serif';sx.textAlign='right';
-  for(let t=Math.ceil(y0/ps)*ps;t<y1;t+=ps){const y=PY(t);if(y<7||y>H-10)continue;sx.beginPath();sx.moveTo(aw-6,y);sx.lineTo(aw,y);sx.stroke();sx.fillText(topView?(Math.abs(Math.round(t*1000)/10)+(t>1e-9?' L':t<-1e-9?' R':'')):String(imperial?Math.round(t*FT*10)/10:+t.toFixed(2)),aw-9,y+4);}
-  sx.save();sx.translate(11,H/2);sx.rotate(-Math.PI/2);sx.textAlign='center';sx.fillText(topView?'Left / Right (cm)':(imperial?'Height (ft)':'Height (m)'),0,0);sx.restore();}
+  sx.fillStyle=muted;sx.font=(sl?'11px':'12px')+' system-ui,sans-serif';sx.textAlign='right';
+  for(let t=Math.ceil(y0/ps)*ps;t<y1;t+=ps){const y=PY(t);if(y<7||y>H-10)continue;sx.beginPath();sx.moveTo(aw-tk,y);sx.lineTo(aw,y);sx.stroke();sx.fillText(topView?(Math.abs(Math.round(t*1000)/10)+(t>1e-9?' L':t<-1e-9?' R':'')):String(imperial?Math.round(t*FT*10)/10:+t.toFixed(2)),aw-tg,y+4);}
+  if(sl)sx.font='10.5px system-ui,sans-serif';sx.save();sx.translate(sl?7:11,H/2);sx.rotate(-Math.PI/2);sx.textAlign='center';sx.fillText(topView?'Left / Right (cm)':(imperial?'Height (ft)':'Height (m)'),0,0);sx.restore();}
  // drag handles
  handles=[];objH.forEach(h=>handles.push(h));if(CAMH&&!LEARN)handles.push({id:'camh',px:CAMH.px,py:CAMH.py}); // Technical Camera: drag the camera up or down to set its height (Rob de Loe, 2026-11-09)
  {const edge=x1-0.04*(x1-x0);
@@ -2240,10 +2244,10 @@ function draw0(){
    if(info.A&&isFinite(M.Zc)&&M.Zc>0){ // the red dot also keeps clear of the + that marks where the plane crosses the camera axis, jumping over it if dragged onto it
     const cq=cw(0,M.Zc/1000),ux=info.dx,uy=-info.dy,sA=[PX(info.A[0]),PY(info.A[1])],tcx=(PX(cq[0])-sA[0])*ux+(PY(cq[1])-sA[1])*uy,t2=(q[0]-sA[0])*ux+(q[1]-sA[1])*uy,R=18;
     if(Math.abs(t2-tcx)<R){let sg=Math.sign(t2-tcx)||lastCrossSide;
-     const at=g=>[sA[0]+(tcx+g*R)*ux,sA[1]+(tcx+g*R)*uy],ok=z=>z[0]>=76&&z[0]<=W-20&&z[1]>=16&&z[1]<=H-16;
+     const at=g=>[sA[0]+(tcx+g*R)*ux,sA[1]+(tcx+g*R)*uy],ok=z=>z[0]>=axW()+24&&z[0]<=W-20&&z[1]>=16&&z[1]<=H-16;
      if(!ok(at(sg)))sg=-sg;lastCrossSide=sg;q=at(sg);}
     else lastCrossSide=Math.sign(t2-tcx)||lastCrossSide;}
-   return(q[0]>=76&&q[0]<=W-20&&q[1]>=16&&q[1]<=H-16)?q:null;};
+   return(q[0]>=axW()+24&&q[0]<=W-20&&q[1]>=16&&q[1]<=H-16)?q:null;};
   let fp=(focusAnchor&&footOf(focusAnchor))||footOf(defAnchor),TPF=null;
   /* Technical Camera (Rob de Loe, 2026-11-09): the red dot and the green diamond keep clear of the scene-width bar at the bottom of the diagram, with room for a
      finger (26 px all round). BARX is the bar in the drawing's own coordinates (turned back for the top view); barIv gives the stretch of the plane of focus inside it. */
@@ -2251,7 +2255,7 @@ function draw0(){
    const r=top?{x0:RW-8-bw-m,x1:RW-8+m,y0:6-m,y1:6+bh+m}:{x0:RW-8-bw-m,x1:RW-8+m,y0:RH-6-bh-m,y1:RH-6+m};return topView?{x0:RH-r.y1,x1:RH-r.y0,y0:r.x0,y1:r.x1}:r;},BAR1=mkBar(26),BAR2=mkBar(8); // BAR2: a tighter margin, used only when no spot clears BAR1
   const barIv=(sA,ux,uy,BARX=BAR1)=>{if(!BARX)return null;let a=-Infinity,b=Infinity;for(const [c,u,mn,mx] of [[sA[0],ux,BARX.x0,BARX.x1],[sA[1],uy,BARX.y0,BARX.y1]]){if(Math.abs(u)<1e-9){if(c<mn||c>mx)return null;continue;}const p=(mn-c)/u,q=(mx-c)/u;a=Math.max(a,Math.min(p,q));b=Math.min(b,Math.max(p,q));}return a<=b?[a,b]:null;};
   if(fp&&info.A){const ux=info.dx,uy=-info.dy,sA=[PX(info.A[0]),PY(info.A[1])],iv=barIv(sA,ux,uy);
-   const ok=z=>z[0]>=76&&z[0]<=W-20&&z[1]>=16&&z[1]<=H-16,t=(fp[0]-sA[0])*ux+(fp[1]-sA[1])*uy;
+   const ok=z=>z[0]>=axW()+24&&z[0]<=W-20&&z[1]>=16&&z[1]<=H-16,t=(fp[0]-sA[0])*ux+(fp[1]-sA[1])*uy;
    for(const v of [iv,barIv(sA,ux,uy,BAR2)]){if(!v||!(t>v[0]&&t<v[1]))break;
     const c=[v[0]-1,v[1]+1].map(x=>[sA[0]+x*ux,sA[1]+x*uy]).filter(ok).sort((p,q)=>Math.hypot(p[0]-fp[0],p[1]-fp[1])-Math.hypot(q[0]-fp[0],q[1]-fp[1]));if(c.length){fp=c[0];break;}}}
   if(fp&&!hideHandles&&READY){sx.lineWidth=3;sx.strokeStyle=bg;sx.fillStyle=acc2;sx.beginPath();sx.arc(fp[0],fp[1],9,0,7);sx.fill();sx.stroke();}
@@ -2798,7 +2802,7 @@ function autoLowerCam(){
  if(AUTOH.view===V.view&&AUTOH.plh===key){hLowNote();return;}
  AUTOH.view=V.view;AUTOH.plh=key;
  if(!(V.view<hCut()-1e-9)){hLowNote();return;} // wider scenes keep the pane's size by showing more width instead
- const W=Math.max(200,Math.round(sc.getBoundingClientRect().width)||960),lf=Math.max(0.18/1.12,122/W),xr0=1.13*V.view/(1-lf),H0=pland?Math.max(PL_HMIN,Math.min(Math.round(W*0.62),PL_H)):Math.max(220,Math.round(W*0.62));
+ const W=Math.max(200,Math.round(sc.getBoundingClientRect().width)||960),lf=lfOf(W),xr0=1.13*V.view/(1-lf),H0=pland?Math.max(PL_HMIN,Math.min(Math.round(W*0.62),PL_H)):Math.max(220,Math.round(W*0.62));
  model();const off=(M&&isFinite(M.h)?M.h-V.h/100:0),fit=Math.max(10,Math.floor(((xr0*H0/W)-1.2-off)*100)); // the lens may sit up to (pane height in metres) - 1.2 m above the ground
  if(V.h>fit+0.5){setVal('h',fit);AUTOH.h=fit;AUTOH.note=true;toast('Camera height lowered to preserve display height.');}
  hLowNote();}
